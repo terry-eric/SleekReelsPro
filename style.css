@@ -1,0 +1,22 @@
+/* style.css - SleekReels Pro 固定核心樣式檔 */
+.reels-ratio {
+    aspect-ratio: 9 / 16;
+}
+.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+}
+@keyframes disc-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.spin-active {
+    animation: disc-spin 4s linear infinite;
+}
+@keyframes marquee {
+    0% { transform: translate3d(10%, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+}
+.marquee-active {
+    animation: marquee 12s linear infinite;
+}
