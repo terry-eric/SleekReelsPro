@@ -1,6 +1,6 @@
-// utils.js - SleekReels Pro 核心演算法與工具庫 (永不變動之核心)
+// utils.js - SleekReels Pro 固定核心演算法與資料庫 (永不變動之核心)
 
-// 全域共享狀態緩存區
+// 全域共享狀態掛載點，確保跨檔案架構完全透明
 window.videoLoaded = false;
 window.selectedFilter = 'normal';
 window.animationFrameId = null;
@@ -38,8 +38,11 @@ window.textSegments = [
     }
 ];
 window.activeSegmentId = 'seg_default_1';
+window.activeDragItem = null;
+window.dragStartOffsetX = 0;
+window.dragStartOffsetY = 0;
 
-// 1. 防禦級非同步安全播放器 (治癒 AbortError)
+// 安全媒體播放器，防止非同步 AbortError 衝突
 function safePlay(mediaElement) {
     if (!mediaElement) return;
     try {
@@ -50,7 +53,7 @@ function safePlay(mediaElement) {
     } catch(e) {}
 }
 
-// 2. 格式化時間 (MM:SS)
+// 格式化時間 (MM:SS)
 function formatTime(seconds) {
     if (seconds === null || isNaN(seconds)) return "00:00";
     const m = Math.floor(seconds / 60);
@@ -58,7 +61,7 @@ function formatTime(seconds) {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-// 3. 獲取 CSS 內建濾鏡屬性
+// 獲取內建 CSS 濾鏡對應字串
 function getCSSFilterString(filterName) {
     switch (filterName) {
         case 'cinematic': return 'contrast(1.2) saturate(1.15) hue-rotate(-12deg) sepia(0.12)';
@@ -70,10 +73,10 @@ function getCSSFilterString(filterName) {
     }
 }
 
-// 4. 強健 3D LUT Cube 解析器 (治癒 DJI OSMO / UTF-8 BOM 錯誤)
+// 強健 3D LUT Cube 解析器 (相容 DJI Action 4 與 DaVinci BOM 頭換行格式)
 function parseCubeLUT(text, filename) {
-    text = text.replace(/^\uFEFF/, "").trim(); // 剔除隱形 BOM 檔頭
-    const lines = text.split(/\r\n|\r|\n/); // 跨平台換行相容
+    text = text.replace(/^\uFEFF/, "").trim(); 
+    const lines = text.split(/\r\n|\r|\n/); 
     let size = 0, data = [];
     
     for (let line of lines) {
@@ -85,7 +88,7 @@ function parseCubeLUT(text, filename) {
         }
         if (line.toUpperCase().startsWith('LUT_3D_INPUT_RANGE') || line.toUpperCase().startsWith('DOMAIN_')) continue;
         
-        const parts = line.split(/\s+/).filter(Boolean); // 相容 Tab 分隔
+        const parts = line.split(/\s+/).filter(Boolean); 
         if (parts.length >= 3 && /^[\d.-]/.test(parts[0])) {
             const r = parseFloat(parts[0]), g = parseFloat(parts[1]), b = parseFloat(parts[2]);
             if (!isNaN(r) && !isNaN(g) && !isNaN(b)) data.push(r, g, b);
@@ -102,14 +105,15 @@ function parseCubeLUT(text, filename) {
     return { success: false, error: `解出數值不符。預期: ${expected}, 實際: ${data.length}` };
 }
 
-// 5. 核心即時 Canvas 渲染引擎 (包含等比例自適應 Fit、多圖層文字與動態解析度因子)
+// 核心即時 Canvas 渲染引擎 (包含等比例自適應 Fit、多圖層文字與動態解析度因子)
 function drawVideoWithLUT(canvas, canvasCtx, videoElement, filterName, updateHitbox = false) {
     const w = canvas.width, h = canvas.height, curr = videoElement.currentTime;
-    const vStart = parseFloat(document.getElementById('trimStart')?.value) || 0;
+    const trimStartInput = document.getElementById('trimStart');
+    const vStart = trimStartInput ? parseFloat(trimStartInput.value) || 0 : 0;
     const clipCurr = curr - vStart;
 
     canvasCtx.fillStyle = '#000000';
-    canvasCtx.fillRect(0, 0, w, h); // 留黑底
+    canvasCtx.fillRect(0, 0, w, h); 
     if (updateHitbox) window.textHitboxes = {};
 
     let isRotated = window.videoRotation % 180 !== 0;
@@ -138,7 +142,7 @@ function drawVideoWithLUT(canvas, canvasCtx, videoElement, filterName, updateHit
         canvasCtx.putImageData(frameData, 0, 0);
     }
 
-    const scaleFactor = h / 640; // 動態排版解析度調整因子
+    const scaleFactor = h / 640; 
     const textOverlayEnable = document.getElementById('textOverlayEnable');
     
     if (textOverlayEnable && textOverlayEnable.checked) {
@@ -221,5 +225,31 @@ function drawVideoWithLUT(canvas, canvasCtx, videoElement, filterName, updateHit
         });
         const igMockCaption = document.getElementById('igMockCaption');
         if (firstVisibleCaption && igMockCaption) igMockCaption.textContent = firstVisibleCaption.replace(/\n/g, ' ');
+    }
+}
+
+// 🆕 補齊核心畫布刷新渲染循環邏輯 (防止影片卡住的關鍵)
+function startCanvasRenderLoop() {
+    const canvas = document.getElementById('previewCanvas');
+    const canvasCtx = canvas.getContext('2d');
+    const videoElement = document.getElementById('sourceVideo');
+    if (window.animationFrameId) cancelAnimationFrame(window.animationFrameId);
+    
+    function drawLoop() {
+        if (window.videoLoaded && !window.isExporting) {
+            drawVideoWithLUT(canvas, canvasCtx, videoElement, window.selectedFilter, true);
+        }
+        window.animationFrameId = requestAnimationFrame(drawLoop);
+    }
+    drawLoop();
+}
+
+// 🆕 手動重繪輔助函式
+function redrawPreviewAndLabels() {
+    const canvas = document.getElementById('previewCanvas');
+    const canvasCtx = canvas.getContext('2d');
+    const videoElement = document.getElementById('sourceVideo');
+    if (window.videoLoaded) {
+        drawVideoWithLUT(canvas, canvasCtx, videoElement, window.selectedFilter, true);
     }
 }

@@ -1,16 +1,24 @@
-// app.js - SleekReels Pro 動態交互與事件監聽綁定 (動態邏輯專屬檔)
+// app.js - SleekReels Pro 動態交互與時間軸事件監聽綁定檔 (動態邏輯專屬)
 
-// 補齊 DOM 元素映射宣告
 const trimStartInput = document.getElementById('trimStart');
 const trimEndInput = document.getElementById('trimEnd');
 const totalTimeText = document.getElementById('totalTimeText');
 const videoInfoLabel = document.getElementById('videoInfoLabel');
 const changeVideoBtn = document.getElementById('changeVideoBtn');
 const rotateVideoBtn = document.getElementById('rotateVideoBtn');
+const videoVolume = document.getElementById('videoVolume');
+const bgmVolume = document.getElementById('bgmVolume');
+const videoMuteBtn = document.getElementById('videoMuteBtn');
+const bgmAudio = document.getElementById('bgmAudio');
+const sourceVideo = document.getElementById('sourceVideo');
+const textSegmentsList = document.getElementById('textSegmentsList');
+const textOverlayContent = document.getElementById('textOverlayContent');
+const textShowStart = document.getElementById('textShowStart');
+const textShowEnd = document.getElementById('textShowEnd');
 
+// 1. 設置主影片核心監聽與 meta 讀取
 function setupVideoEventListeners() {
     const videoUpload = document.getElementById('videoUpload');
-    const sourceVideo = document.getElementById('sourceVideo');
     const videoLoadingSpinner = document.getElementById('videoLoadingSpinner');
     const videoPlaceholder = document.getElementById('videoPlaceholder');
     const previewCanvas = document.getElementById('previewCanvas');
@@ -19,12 +27,10 @@ function setupVideoEventListeners() {
     const exportBtnText = document.getElementById('exportBtnText');
     const playPauseBtn = document.getElementById('playPauseBtn');
     const mockAudioDisc = document.getElementById('mockAudioDisc');
-    const bgmAudio = document.getElementById('bgmAudio');
 
     if(videoUpload) {
         videoUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            const file = e.target.files[0]; if (!file) return;
             if (videoLoadingSpinner) videoLoadingSpinner.classList.remove('hidden');
             sourceVideo.src = URL.createObjectURL(file);
         });
@@ -47,9 +53,9 @@ function setupVideoEventListeners() {
             if (trimStartInput) { trimStartInput.value = "0.0"; trimStartInput.max = duration; }
             const endVal = Math.min(15, duration);
             if (trimEndInput) { trimEndInput.value = endVal.toFixed(1); trimEndInput.max = duration; }
-            if (document.getElementById('textShowEnd')) document.getElementById('textShowEnd').value = endVal.toFixed(1);
+            if (textShowEnd) textShowEnd.value = endVal.toFixed(1);
 
-            updateVisualTimeline();
+            updateTimelineUI();
             enforceBgmWindow();
 
             if (exportBtn) { exportBtn.disabled = false; exportBtnText.textContent = '匯出您的 Reels 影片 (WebM)'; }
@@ -95,117 +101,60 @@ function setupVideoEventListeners() {
     }
 }
 
-function setupFilterSelection() {
-    const filterContainer = document.getElementById('filterContainer');
-    if (filterContainer) {
-        filterContainer.addEventListener('click', (e) => {
-            const card = e.target.closest('.filter-card');
-            if (!card || card.getAttribute('data-action') === 'upload_lut') return;
+// 2. 設置主影片裁剪 UI 刻度
+function updateTimelineUI() {
+    if (!sourceVideo || !sourceVideo.duration) return;
+    const dur = sourceVideo.duration;
+    const start = parseFloat(trimStartInput.value) || 0;
+    const end = parseFloat(trimEndInput.value) || dur;
 
-            document.querySelectorAll('.filter-card').forEach(c => {
-                c.classList.remove('active', 'border-violet-500'); c.classList.add('border-transparent');
-            });
-            card.classList.add('active', 'border-violet-500'); card.classList.remove('border-transparent');
-            window.selectedFilter = card.getAttribute('data-filter');
-            redrawPreviewAndLabels();
-        });
-    }
+    document.getElementById('timelineHighlight').style.left = `${(start / dur) * 100}%`;
+    document.getElementById('timelineHighlight').style.right = `${100 - ((end / dur) * 100)}%`;
+    document.getElementById('timelineLeftBlank').style.width = `${(start / dur) * 100}%`;
+    document.getElementById('timelineRightBlank').style.width = `${100 - ((end / dur) * 100)}%`;
+    document.getElementById('timelineStartHandle').style.left = `${(start / dur) * 100}%`;
+    document.getElementById('timelineEndHandle').style.left = `${(end / dur) * 100}%`;
+    if (document.getElementById('clipDurationText')) document.getElementById('clipDurationText').textContent = `${(end - start).toFixed(1)}s`;
 }
 
-function setupLutUpload() {
-    const lutUpload = document.getElementById('lutUpload');
-    if (lutUpload) {
-        lutUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            const fileName = file.name, reader = new FileReader();
-            reader.onload = function(evt) {
-                const res = parseCubeLUT(evt.target.result, fileName);
-                if (res.success) {
-                    const btn = document.createElement('button');
-                    btn.className = 'filter-card group bg-gray-950 p-2 rounded-xl text-xs text-left border-2 border-transparent';
-                    btn.setAttribute('data-filter', res.id);
-                    btn.innerHTML = `<div class="w-full aspect-[4/3] bg-gradient-to-br from-violet-600 to-fuchsia-800 rounded-lg mb-1 flex items-center justify-center"><span class="text-[9px] bg-black/60 px-1 rounded text-white">自訂</span></div><span class="text-xs font-semibold block truncate" title="${res.name}">${res.name}</span>`;
-                    document.getElementById('lutUploadLabel').insertAdjacentElement('afterend', btn);
-                    btn.click();
-                } else {
-                    alert(res.error);
-                }
-            };
-            reader.readAsText(file);
-            lutUpload.value = '';
-        });
-    }
-}
-
-function setupAudioHandlers() {
-    const audioUpload = document.getElementById('audioUpload');
-    const bgmAudio = document.getElementById('bgmAudio');
-    const videoVolume = document.getElementById('videoVolume');
-    const bgmVolume = document.getElementById('bgmVolume');
-    const videoMuteBtn = document.getElementById('videoMuteBtn');
-
-    if (audioUpload) {
-        audioUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            loadBGMAudio(URL.createObjectURL(file), file.name);
-        });
-    }
-    document.querySelectorAll('.builtin-track').forEach(t => {
-        t.addEventListener('click', () => loadBGMAudio(t.getAttribute('data-url'), t.textContent));
-    });
-
-    if (videoMuteBtn && videoVolume) {
-        videoMuteBtn.addEventListener('click', () => {
-            window.isVideoMuted = !window.isVideoMuted;
-            if (window.isVideoMuted) { window.prevVideoVol = videoVolume.value; videoVolume.value = 0; document.getElementById('sourceVideo').muted = true; videoMuteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark text-red-500"></i>'; }
-            else { videoVolume.value = window.prevVideoVol == 0 ? 100 : window.prevVideoVol; document.getElementById('sourceVideo').muted = false; videoMuteBtn.innerHTML = '<i class="fa-solid fa-volume-high text-gray-400"></i>'; }
-            if (document.getElementById('videoVolumeLabel')) document.getElementById('videoVolumeLabel').textContent = `${videoVolume.value}%`;
-            document.getElementById('sourceVideo').volume = videoVolume.value / 100;
-        });
-    }
-    if (videoVolume) {
-        videoVolume.addEventListener('input', () => {
-            document.getElementById('sourceVideo').volume = videoVolume.value / 100;
-            if (document.getElementById('videoVolumeLabel')) document.getElementById('videoVolumeLabel').textContent = `${videoVolume.value}%`;
-        });
-    }
-    if (bgmVolume) {
-        bgmVolume.addEventListener('input', () => {
-            bgmAudio.volume = bgmVolume.value / 100;
-            if (document.getElementById('bgmVolumeLabel')) document.getElementById('bgmVolumeLabel').textContent = `${bgmVolume.value}%`;
-        });
-    }
+// 3. 影片裁剪雙把手精確拖曳控制
+function setupDraggableTimeline() {
+    const container = document.getElementById('timelineContainer'); if (!container) return;
     
-    const bgmTrimStart = document.getElementById('bgmTrimStart'), bgmTrimEnd = document.getElementById('bgmTrimEnd');
-    if (bgmTrimStart) bgmTrimStart.addEventListener('change', () => syncBgmTime());
-    if (bgmTrimEnd) bgmTrimEnd.addEventListener('change', () => syncBgmTime());
-}
+    const handleTimelineMove = (clientX) => {
+        if (!sourceVideo?.duration) return;
+        const rect = container.getBoundingClientRect(), ratio = Math.max(0, Math.min((clientX - rect.left)/rect.width, 1));
+        const targetTime = ratio * sourceVideo.duration;
 
-function loadBGMAudio(url, name) {
-    const bgmAudio = document.getElementById('bgmAudio');
-    bgmAudio.src = url;
-    document.getElementById('bgmNameText').textContent = name;
-    document.getElementById('audioWaveformContainer').classList.remove('hidden');
-    if (document.getElementById('phoneUiToggle')?.checked) document.getElementById('igMockMusicLabel').textContent = name;
+        let start = parseFloat(trimStartInput.value), end = parseFloat(trimEndInput.value);
+        if (window.activeHandle === 'start') { start = Math.max(0, Math.min(targetTime, end - 0.5)); trimStartInput.value = start.toFixed(1); sourceVideo.currentTime = start; enforceBgmWindow(); }
+        else if (window.activeHandle === 'end') { end = Math.min(sourceVideo.duration, Math.max(targetTime, start + 0.5)); trimEndInput.value = end.toFixed(1); sourceVideo.currentTime = start; enforceBgmWindow(); }
+        else if (window.activeHandle === 'scrub') { sourceVideo.currentTime = targetTime; }
+        updateTimelineUI();
+    };
 
-    bgmAudio.addEventListener('loadedmetadata', () => {
-        enforceBgmWindow();
-        bgmAudio.volume = (document.getElementById('bgmVolume')?.value || 80) / 100;
-        if (!document.getElementById('sourceVideo').paused) { syncBgmTime(); safePlay(bgmAudio); }
+    container.addEventListener('mousedown', (e) => {
+        if(!window.videoLoaded) return;
+        const rect = container.getBoundingClientRect(), ratio = (e.clientX - rect.left)/rect.width, dur = sourceVideo.duration;
+        const sDiff = Math.abs((parseFloat(trimStartInput.value)/dur) - ratio), eDiff = Math.abs((parseFloat(trimEndInput.value)/dur) - ratio);
+        if (sDiff < 0.05) window.activeHandle = 'start'; else if (eDiff < 0.05) window.activeHandle = 'end'; else window.activeHandle = 'scrub';
+        window.isDraggingTimeline = true; handleTimelineMove(e.clientX);
     });
+    window.addEventListener('mousemove', (e) => { if (window.isDraggingTimeline) handleTimelineMove(e.clientX); });
+    window.addEventListener('mouseup', () => { window.isDraggingTimeline = false; window.activeHandle = null; });
 }
 
+// 4. 音效固定滑動窗口管理演算法
 function enforceBgmWindow() {
-    const bgmAudio = document.getElementById('bgmAudio');
     if (!bgmAudio?.src || !window.videoLoaded) return;
-    const vStart = parseFloat(trimStartInput?.value) || 0, vEnd = parseFloat(trimEndInput?.value) || document.getElementById('sourceVideo').duration;
+    const vStart = parseFloat(trimStartInput.value) || 0, vEnd = parseFloat(trimEndInput.value) || sourceVideo.duration;
     const vDur = vEnd - vStart, windowSize = Math.min(bgmAudio.duration, vDur);
     let startVal = parseFloat(document.getElementById('bgmTrimStart').value) || 0;
 
     if (startVal + windowSize > bgmAudio.duration) startVal = Math.max(0, bgmAudio.duration - windowSize);
     document.getElementById('bgmTrimStart').value = startVal.toFixed(1);
     document.getElementById('bgmTrimEnd').value = (startVal + windowSize).toFixed(1);
-    document.getElementById('audioClipDurationText').textContent = `${windowSize.toFixed(1)}s`;
+    if(document.getElementById('audioClipDurationText')) document.getElementById('audioClipDurationText').textContent = `${windowSize.toFixed(1)}s`;
 
     const dur = bgmAudio.duration;
     document.getElementById('audioTimelineHighlight').style.left = `${(startVal/dur)*100}%`;
@@ -220,17 +169,14 @@ function enforceBgmWindow() {
 }
 
 function setupAudioDraggableTimeline() {
-    const container = document.getElementById('audioTimelineContainer');
-    if (!container) return;
+    const container = document.getElementById('audioTimelineContainer'); if (!container) return;
     
     const handleBgmMove = (clientX) => {
-        const bgmAudio = document.getElementById('bgmAudio');
         if (!bgmAudio?.src || !bgmAudio.duration) return;
-        const rect = container.getBoundingClientRect();
-        const ratio = Math.max(0, Math.min((clientX - rect.left) / rect.width, 1));
+        const rect = container.getBoundingClientRect(), ratio = Math.max(0, Math.min((clientX - rect.left) / rect.width, 1));
         const targetTime = ratio * bgmAudio.duration;
 
-        const vStart = parseFloat(trimStartInput?.value) || 0, vEnd = parseFloat(trimEndInput?.value) || document.getElementById('sourceVideo').duration;
+        const vStart = parseFloat(trimStartInput?.value) || 0, vEnd = parseFloat(trimEndInput?.value) || sourceVideo.duration;
         const windowSize = Math.min(bgmAudio.duration, vEnd - vStart);
         
         let startVal = targetTime;
@@ -244,7 +190,7 @@ function setupAudioDraggableTimeline() {
     };
 
     container.addEventListener('mousedown', (e) => {
-        const bgmAudio = document.getElementById('bgmAudio');
+        if (!bgmAudio?.src) return;
         const rect = container.getBoundingClientRect(), ratio = (e.clientX - rect.left) / rect.width;
         const sRatio = (parseFloat(document.getElementById('bgmTrimStart').value) || 0) / bgmAudio.duration;
         const eRatio = (parseFloat(document.getElementById('bgmTrimEnd').value) || bgmAudio.duration) / bgmAudio.duration;
@@ -255,31 +201,31 @@ function setupAudioDraggableTimeline() {
         
         window.isDraggingAudioTimeline = true; handleBgmMove(e.clientX);
     });
-
     window.addEventListener('mousemove', (e) => { if (window.isDraggingAudioTimeline) handleBgmMove(e.clientX); });
     window.addEventListener('mouseup', () => { window.isDraggingAudioTimeline = false; window.activeAudioHandle = null; });
 }
 
+// 5. 字幕段落 UI 管理與複製/刪除
 function renderSegmentsList() {
-    const list = document.getElementById('textSegmentsList'); if (!list) return;
-    list.innerHTML = '';
+    if (!textSegmentsList) return;
+    textSegmentsList.innerHTML = '';
     window.textSegments.forEach((seg, index) => {
         const card = document.createElement('div');
         card.className = `p-2 rounded-lg border text-xs cursor-pointer ${seg.id === window.activeSegmentId ? 'bg-amber-500/10 border-amber-500' : 'bg-gray-950 border-gray-800'}`;
         card.innerHTML = `<div class="flex justify-between font-bold text-gray-400"><span>段落 ${index+1}</span><span class="text-amber-500">${seg.start.toFixed(1)}s - ${seg.end.toFixed(1)}s</span></div><p class="truncate font-medium mt-1 text-gray-100">${seg.text || '(空白)'}</p>`;
         card.addEventListener('click', () => {
             window.activeSegmentId = seg.id; renderSegmentsList(); syncActiveSegmentUI(); redrawPreviewAndLabels();
-            if (window.videoLoaded) document.getElementById('sourceVideo').currentTime = (parseFloat(trimStartInput?.value) || 0) + seg.start;
+            if (window.videoLoaded) sourceVideo.currentTime = (parseFloat(trimStartInput?.value) || 0) + seg.start;
         });
-        list.appendChild(card);
+        textSegmentsList.appendChild(card);
     });
 }
 
 function syncActiveSegmentUI() {
     const seg = window.textSegments.find(s => s.id === window.activeSegmentId); if (!seg) return;
-    if (document.getElementById('textOverlayContent') && document.activeElement !== document.getElementById('textOverlayContent')) document.getElementById('textOverlayContent').value = seg.text;
-    if (document.getElementById('textShowStart') && document.activeElement !== document.getElementById('textShowStart')) document.getElementById('textShowStart').value = seg.start.toFixed(1);
-    if (document.getElementById('textShowEnd') && document.activeElement !== document.getElementById('textShowEnd')) document.getElementById('textShowEnd').value = seg.end.toFixed(1);
+    if (textOverlayContent && document.activeElement !== textOverlayContent) textOverlayContent.value = seg.text;
+    if (textShowStart && document.activeElement !== textShowStart) textShowStart.value = seg.start.toFixed(1);
+    if (textShowEnd && document.activeElement !== textShowEnd) textShowEnd.value = seg.end.toFixed(1);
     document.getElementById('textSizeSlider').value = seg.size;
     document.getElementById('textWidthSlider').value = seg.boxWidth;
     document.getElementById('textAnimInSelect').value = seg.animIn;
@@ -290,8 +236,8 @@ function syncActiveSegmentUI() {
 
 function setupSegmentButtons() {
     document.getElementById('addSegmentBtn')?.addEventListener('click', () => {
-        const vStart = parseFloat(trimStartInput?.value) || 0, vEnd = parseFloat(trimEndInput?.value) || document.getElementById('sourceVideo').duration;
-        const curRel = Math.max(0, document.getElementById('sourceVideo').currentTime - vStart);
+        const vStart = parseFloat(trimStartInput?.value) || 0, vEnd = parseFloat(trimEndInput?.value) || sourceVideo.duration;
+        const curRel = Math.max(0, sourceVideo.currentTime - vStart);
         const newSeg = { id: 'seg_' + Date.now(), text: '新文字 ✍️', start: Math.round(curRel*10)/10, end: Math.min(Math.round((curRel+4)*10)/10, vEnd - vStart), animIn: 'fade', animOut: 'fade', size: 28, boxWidth: 80, align: 'center', color: '#ffffff', bgEnable: false, bgColor: '#000000', strokeEnable: true, strokeColor: '#000000', strokeWidth: 4, x: 15, y: 35 };
         window.textSegments.push(newSeg); window.activeSegmentId = newSeg.id; renderSegmentsList(); syncActiveSegmentUI(); redrawPreviewAndLabels();
     });
@@ -310,18 +256,21 @@ function setupSegmentButtons() {
 }
 
 function setupTextOverlayHandlers() {
-    const content = document.getElementById('textOverlayContent'), startIn = document.getElementById('textShowStart'), endIn = document.getElementById('textShowEnd');
-    content?.addEventListener('input', (e) => { window.textSegments.find(s => s.id === window.activeSegmentId).text = e.target.value; renderSegmentsList(); redrawPreviewAndLabels(); });
-    
-    startIn?.addEventListener('input', (e) => {
+    if(textOverlayContent) {
+        textOverlayContent.addEventListener('input', (e) => { 
+            window.textSegments.find(s => s.id === window.activeSegmentId).text = e.target.value; 
+            renderSegmentsList(); redrawPreviewAndLabels(); 
+        });
+    }
+    textShowStart?.addEventListener('input', (e) => {
         let val = parseFloat(e.target.value); if (isNaN(val)) return;
         window.textSegments.find(s => s.id === window.activeSegmentId).start = Math.max(0, val); renderSegmentsList();
-        document.getElementById('sourceVideo').currentTime = (parseFloat(trimStartInput?.value) || 0) + val;
+        sourceVideo.currentTime = (parseFloat(trimStartInput?.value) || 0) + val;
     });
-    endIn?.addEventListener('input', (e) => {
+    textShowEnd?.addEventListener('input', (e) => {
         let val = parseFloat(e.target.value); if (isNaN(val)) return;
         window.textSegments.find(s => s.id === window.activeSegmentId).end = Math.max(0, val); renderSegmentsList();
-        document.getElementById('sourceVideo').currentTime = Math.max(0, (parseFloat(trimStartInput?.value) || 0) + val - 0.1);
+        sourceVideo.currentTime = Math.max(0, (parseFloat(trimStartInput?.value) || 0) + val - 0.1);
     });
 
     document.getElementById('textSizeSlider')?.addEventListener('input', (e) => { window.textSegments.find(s => s.id === window.activeSegmentId).size = parseInt(e.target.value); redrawPreviewAndLabels(); });
@@ -331,7 +280,7 @@ function setupTextOverlayHandlers() {
     document.getElementById('textStrokeEnable')?.addEventListener('change', (e) => { window.textSegments.find(s => s.id === window.activeSegmentId).strokeEnable = e.target.checked; redrawPreviewAndLabels(); });
     document.getElementById('textStrokeWidthSlider')?.addEventListener('input', (e) => { window.textSegments.find(s => s.id === window.activeSegmentId).strokeWidth = parseInt(e.target.value); redrawPreviewAndLabels(); });
 
-    // Canvas 拖曳文字
+    // Canvas 手指/滑鼠 拖曳字幕排版
     const canvas = document.getElementById('previewCanvas');
     const handleDragStart = (clientX, clientY) => {
         if (!window.videoLoaded || !document.getElementById('textOverlayEnable')?.checked) return;
@@ -353,155 +302,28 @@ function setupTextOverlayHandlers() {
         redrawPreviewAndLabels();
     };
 
-    canvas.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY));
-    window.addEventListener('mousemove', (e) => handleDragMove(e.clientX, e.clientY));
-    window.addEventListener('mouseup', () => window.activeDragItem = null);
-    canvas.addEventListener('touchstart', (e) => { if(e.touches.length > 0) handleStart(e.touches[0].clientX, e.touches[0].clientY); });
-    window.addEventListener('touchmove', (e) => { if (window.activeDragItem && e.touches.length > 0) { e.preventDefault(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
-    window.addEventListener('touchend', () => window.activeDragItem = null);
-}
-
-function setupDraggableTimeline() {
-    const container = document.getElementById('timelineContainer'); if (!container) return;
-    const handleTimelineMove = (clientX) => {
-        const sourceVideo = document.getElementById('sourceVideo'); if (!sourceVideo?.duration) return;
-        const rect = container.getBoundingClientRect(), ratio = Math.max(0, Math.min((clientX - rect.left)/rect.width, 1));
-        const targetTime = ratio * sourceVideo.duration;
-
-        let start = parseFloat(trimStartInput.value), end = parseFloat(trimEndInput.value);
-        if (window.activeHandle === 'start') { start = Math.max(0, Math.min(targetTime, end - 0.5)); trimStartInput.value = start.toFixed(1); sourceVideo.currentTime = start; window.enforceBgmWindow(); }
-        else if (window.activeHandle === 'end') { end = Math.min(sourceVideo.duration, Math.max(targetTime, start + 0.5)); trimEndInput.value = end.toFixed(1); sourceVideo.currentTime = start; window.enforceBgmWindow(); }
-        else if (window.activeHandle === 'scrub') { sourceVideo.currentTime = targetTime; }
-        updateTimelineUI(start, end);
-    };
-
-    container.addEventListener('mousedown', (e) => {
-        if(!window.videoLoaded) return;
-        const rect = container.getBoundingClientRect(), ratio = (e.clientX - rect.left)/rect.width, dur = document.getElementById('sourceVideo').duration;
-        const sDiff = Math.abs((parseFloat(trimStartInput.value)/dur) - ratio), eDiff = Math.abs((parseFloat(trimEndInput.value)/dur) - ratio);
-        if (sDiff < 0.05) window.activeHandle = 'start'; else if (eDiff < 0.05) window.activeHandle = 'end'; else window.activeHandle = 'scrub';
-        window.isDraggingTimeline = true; handleTimelineInteraction(e.clientX);
-    });
-    window.addEventListener('mousemove', (e) => { if (window.isDraggingTimeline) handleTimelineMove(e.clientX); });
-    window.addEventListener('mouseup', () => { window.isDraggingTimeline = false; window.activeHandle = null; });
-}
-
-function updateTimelineUI(start, end) {
-    const dur = document.getElementById('sourceVideo').duration; if (!dur) return;
-    document.getElementById('timelineHighlight').style.left = `${(start/dur)*100}%`;
-    document.getElementById('timelineHighlight').style.right = `${100 - ((end/dur)*100)}%`;
-    document.getElementById('timelineLeftBlank').style.width = `${(start/dur)*100}%`;
-    document.getElementById('timelineRightBlank').style.width = `${100 - ((end/dur)*100)}%`;
-    document.getElementById('timelineStartHandle').style.left = `${(start/dur)*100}%`;
-    document.getElementById('timelineEndHandle').style.left = `${(end/dur)*100}%`;
-    document.getElementById('clipDurationText').textContent = `${(end - start).toFixed(1)}s`;
-}
-
-function setupQuickCaptureButtons() {
-    document.getElementById('capTextStartBtn')?.addEventListener('click', () => {
-        const vStart = parseFloat(trimStartInput?.value) || 0;
-        const rounded = Math.max(0, Math.round((document.getElementById('sourceVideo').currentTime - vStart)*10)/10);
-        document.getElementById('textShowStart').value = rounded.toFixed(1);
-        window.textSegments.find(s => s.id === window.activeSegmentId).start = rounded; renderSegmentsList();
-    });
-    document.getElementById('capTextEndBtn')?.addEventListener('click', () => {
-        const vStart = parseFloat(trimStartInput?.value) || 0;
-        const rounded = Math.max(0, Math.round((document.getElementById('sourceVideo').currentTime - vStart)*10)/10);
-        document.getElementById('textShowEnd').value = rounded.toFixed(1);
-        window.textSegments.find(s => s.id === window.activeSegmentId).end = rounded; renderSegmentsList();
-    });
-}
-
-function setupIgUiOverlayHandlers() {
-    document.getElementById('phoneUiToggle')?.addEventListener('change', (e) => {
-        document.getElementById('igUiOverlay').classList.toggle('hidden', !e.target.checked);
-        if(e.target.checked) document.getElementById('igMockMusicLabel').textContent = document.getElementById('bgmNameText').textContent || "影片原聲";
-    });
-}
-
-function setupExportPipeline() {
-    document.getElementById('exportBtn')?.addEventListener('click', startExport);
-    document.getElementById('cancelExportBtn')?.addEventListener('click', () => { window.isExporting = false; document.getElementById('exportModal').classList.add('hidden'); });
-}
-
-async function startExport() {
-    if (!window.videoLoaded || window.isExporting) return;
-    window.isExporting = true;
-    const sourceVideo = document.getElementById('sourceVideo'), bgmAudio = document.getElementById('bgmAudio');
-    
-    document.getElementById('exportModal').classList.remove('hidden');
-    document.getElementById('renderingState').classList.remove('hidden');
-    document.getElementById('completedState').classList.add('hidden');
-    sourceVideo.pause(); bgmAudio.pause(); updatePlayPauseIcon(false);
-
-    const start = parseFloat(trimStartInput.value) || 0, end = parseFloat(trimEndInput.value) || sourceVideo.duration, duration = end - start;
-    const resW = parseInt(document.getElementById('exportResolution').value || 1080);
-    const expCanvas = document.createElement('canvas'); expCanvas.width = resW; expCanvas.height = Math.round(resW * (16/9));
-    const expCtx = expCanvas.getContext('2d');
-
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const dest = audioCtx.createMediaStreamDestination();
-    let compressor = null;
-    if (document.getElementById('audioLimiterEnable')?.checked) {
-        compressor = audioCtx.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-3, audioCtx.currentTime);
-        compressor.ratio.setValueAtTime(20, audioCtx.currentTime);
-        compressor.connect(dest);
+    if(canvas) {
+        canvas.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY));
+        window.addEventListener('mousemove', (e) => handleDragMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', () => window.activeDragItem = null);
+        canvas.addEventListener('touchstart', (e) => { if(e.touches.length > 0) handleDragStart(e.touches[0].clientX, e.touches[0].clientY); });
+        window.addEventListener('touchmove', (e) => { if (window.activeDragItem && e.touches.length > 0) { e.preventDefault(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
+        window.addEventListener('touchend', () => window.activeDragItem = null);
     }
-
-    try {
-        const vNode = audioCtx.createMediaElementSource(sourceVideo), vGain = audioCtx.createGain();
-        vGain.gain.value = document.getElementById('videoVolume').value / 100;
-        vNode.connect(vGain); vGain.connect(compressor || dest);
-    } catch(e){}
-    if (bgmAudio.src) {
-        try {
-            const bNode = audioCtx.createMediaElementSource(bgmAudio), bGain = audioCtx.createGain();
-            bGain.gain.value = document.getElementById('bgmVolume').value / 100;
-            bNode.connect(bGain); bGain.connect(compressor || dest);
-        } catch(e){}
-    }
-
-    const vStream = expCanvas.captureStream(30), outStream = new MediaStream();
-    vStream.getVideoTracks().forEach(t => outStream.addTrack(t));
-    dest.stream.getAudioTracks().forEach(t => outStream.addTrack(t));
-
-    const rec = new MediaRecorder(outStream, { mimeType: 'video/webm' });
-    let chunks = []; rec.ondataavailable = (e) => { if(e.data.size > 0) chunks.push(e.data); };
-    rec.onstop = () => {
-        const dl = document.getElementById('downloadLink');
-        dl.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
-        dl.download = `SleekReels_${Date.now()}.webm`;
-        document.getElementById('renderingState').classList.add('hidden');
-        document.getElementById('completedState').classList.remove('hidden');
-        audioCtx.close(); window.isExporting = false;
-    };
-
-    rec.start(); sourceVideo.currentTime = start; if(bgmAudio.src) syncBgmTime();
-    safePlay(sourceVideo); if(bgmAudio.src) safePlay(bgmAudio);
-
-    function renderStep() {
-        if (!window.isExporting) { rec.stop(); return; }
-        if (bgmAudio.src) syncBgmTime();
-        drawVideoWithLUT(exportCanvas, exportCtx, sourceVideo, window.selectedFilter, false);
-        const elapsed = sourceVideo.currentTime - start, pct = Math.min(100, (elapsed/duration)*100);
-        document.getElementById('progressText').textContent = `${Math.floor(pct)}%`;
-        document.getElementById('renderingTimeText').textContent = `${elapsed.toFixed(1)}s / ${duration.toFixed(1)}s`;
-
-        if (sourceVideo.currentTime >= end || sourceVideo.ended) { rec.stop(); sourceVideo.pause(); bgmAudio.pause(); }
-        else { requestAnimationFrame(renderStep); }
-    }
-    requestAnimationFrame(renderStep);
 }
 
-// 初始化主程式監聽器
+function setupAudioHandlersAndPipeline() {
+    setupAudioHandlers();
+    setupAudioDraggableTimeline();
+    setupExportPipeline();
+}
+
+// 初始化主頁面生命週期
 setupVideoEventListeners();
 setupFilterSelection();
 setupLutUpload();
-setupAudioHandlers();
-setupAudioDraggableTimeline();
+setupAudioHandlersAndPipeline();
 setupTextOverlayHandlers();
 setupDraggableTimeline();
 setupQuickCaptureButtons();
-setupIgUiOverlayHandlers();
 setupSegmentButtons();
