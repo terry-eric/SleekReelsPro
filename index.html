@@ -1,0 +1,2821 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SleekReels Pro - 專業網頁版 IG Reels 編輯器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+            background-color: #0b0f19;
+        }
+        /* 隱藏滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+        /* 9:16 直式影片比例維持 */
+        .reels-ratio {
+            aspect-ratio: 9 / 16;
+        }
+        /* 禁止文字反選干擾拖曳 */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* 音樂唱片旋轉動畫 */
+        @keyframes disc-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-active {
+            animation: disc-spin 4s linear infinite;
+        }
+        /* 跑馬燈文字動畫 */
+        @keyframes marquee {
+            0% { transform: translate3d(10%, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        .marquee-active {
+            animation: marquee 12s linear infinite;
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col">
+
+    <!-- 頂部導覽列 -->
+    <header class="border-b border-gray-800/80 bg-gray-950/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-500 p-2 rounded-xl shadow-lg">
+                <i class="fa-solid fa-wand-magic-sparkles text-white text-lg animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-400 bg-clip-text text-transparent">SleekReels Pro</h1>
+                <p class="text-xs text-gray-500">純前端免後台 · 直式 9:16 Reels 影音創作器</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-xs bg-green-500/10 text-green-400 px-3 py-1.5 rounded-full border border-green-500/20 font-medium flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> 瀏覽器本地硬體加速
+            </span>
+        </div>
+    </header>
+
+    <!-- 主要工作區 -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+        
+        <!-- 左側：影片即時預覽 (Reels 9:16) 與底部整合時間軸剪輯軌 -->
+        <div class="lg:col-span-5 xl:col-span-4 flex flex-col items-center justify-start gap-4">
+            
+            <!-- 📱 極致手機外框預覽容器 -->
+            <div class="w-full max-w-[340px] md:max-w-[370px] bg-black p-3.5 rounded-[48px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] border-4 border-gray-800 relative ring-1 ring-gray-900 flex flex-col items-center justify-center">
+                
+                <!-- 手機頂部動態島 -->
+                <div class="absolute top-2 w-28 h-6 bg-black rounded-full z-40 flex items-center justify-between px-3 select-none pointer-events-none">
+                    <div class="w-2.5 h-2.5 rounded-full bg-gray-900"></div>
+                    <div class="w-10 h-1 bg-gray-900 rounded-full"></div>
+                    <div class="w-2 h-2 rounded-full bg-blue-900/40"></div>
+                </div>
+
+                <!-- 手機頂部系統狀態列 -->
+                <div class="w-full px-5 pt-1 pb-1.5 flex justify-between items-center text-[11px] font-semibold text-white/90 select-none pointer-events-none z-30">
+                    <span class="font-mono">9:41</span>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-signal text-[9px]"></i>
+                        <i class="fa-solid fa-wifi text-[9px]"></i>
+                        <i class="fa-solid fa-battery-three-quarters text-xs text-white"></i>
+                    </div>
+                </div>
+
+                <!-- Reels 9:16 影片核心視窗 -->
+                <div id="reelsContainer" class="w-full reels-ratio bg-gray-950 rounded-[32px] overflow-hidden border border-white/5 relative group flex items-center justify-center cursor-default no-select">
+                    
+                    <!-- 未上傳影片時的 Placeholder -->
+                    <div id="videoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center z-10 bg-gray-950 rounded-[32px]">
+                        <div class="w-16 h-16 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center mb-4 text-gray-500 group-hover:scale-110 transition-transform duration-300">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-pink-500"></i>
+                        </div>
+                        <h3 class="font-semibold text-base text-gray-200">開始製作您的 Reel</h3>
+                        <p class="text-xs text-gray-500 mt-2 max-w-[200px] leading-relaxed">點擊右側上傳原始影片，或直接拖曳至此處</p>
+                        <label class="mt-6 bg-gradient-to-r from-pink-500 to-violet-600 hover:from-pink-600 hover:to-violet-700 text-white text-xs font-semibold px-5 py-2.5 rounded-full shadow-lg cursor-pointer transition-all">
+                            選擇影片檔案
+                            <input type="file" id="videoUpload" accept="video/*" class="hidden">
+                        </label>
+                    </div>
+
+                    <!-- 實際運作的 Canvas 畫布 (套用 LUT 與多段文字後的高速預覽) -->
+                    <canvas id="previewCanvas" class="w-full h-full object-cover hidden cursor-grab active:cursor-grabbing rounded-[32px] bg-black"></canvas>
+
+                    <!-- 用來隱藏讀取的原始 Video 標籤 -->
+                    <video id="sourceVideo" class="hidden" loop playsinline muted></video>
+
+                    <!-- 影片載入中遮罩 -->
+                    <div id="videoLoadingSpinner" class="absolute inset-0 bg-gray-950/80 backdrop-blur-sm z-20 hidden flex-col items-center justify-center gap-3 rounded-[32px]">
+                        <div class="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span class="text-sm text-gray-300 font-medium">讀取影片媒體中...</span>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- 📱 模擬原生手機 IG Reels 介面疊加層 (Instagram UI) -->
+                    <!-- ========================================== -->
+                    <div id="igUiOverlay" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between pt-4 pb-0 hidden no-select">
+                        
+                        <!-- 頂部列：返回 Chevron 按鈕與 Reels 標題 -->
+                        <div class="flex items-center justify-between text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] px-4">
+                            <div class="flex items-center gap-2 cursor-pointer pointer-events-auto hover:text-pink-400 transition-colors" id="mockBackBtn">
+                                <i class="fa-solid fa-chevron-left text-base"></i>
+                                <span class="text-xs font-bold font-sans">返回</span>
+                            </div>
+                            <span class="font-bold text-base tracking-wide">Reels</span>
+                            <i class="fa-solid fa-camera text-lg cursor-pointer pointer-events-auto hover:opacity-80"></i>
+                        </div>
+
+                        <!-- 底部貼文資訊、原生影片進度條 與 導航欄 整合包 -->
+                        <div class="w-full flex flex-col bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-8 shrink-0">
+                            
+                            <!-- 底部貼文與右側按鈕整合層 -->
+                            <div class="flex items-end justify-between gap-3 px-4 pb-3">
+                                
+                                <!-- 左下側貼文資訊 -->
+                                <div class="flex-1 text-white flex flex-col gap-2.5 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)] pb-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 p-[1.5px] shadow">
+                                            <div class="w-full h-full rounded-full bg-gray-900 flex items-center justify-center text-[10px] font-bold text-pink-400">SR</div>
+                                        </div>
+                                        <span class="text-xs font-bold font-sans">sleek_creator</span>
+                                        <button class="bg-transparent border border-white/40 text-[10px] font-semibold px-2 py-0.5 rounded-md hover:bg-white/10 transition-colors">關注</button>
+                                    </div>
+                                    
+                                    <!-- 智慧同步最前段可見之文字內容 -->
+                                    <p id="igMockCaption" class="text-xs leading-relaxed line-clamp-2 max-w-[210px] text-gray-100 font-medium">
+                                        我的第一支 Reels!
+                                    </p>
+
+                                    <!-- 滾動音樂名稱 -->
+                                    <div class="flex items-center gap-1.5 bg-black/25 backdrop-blur-sm px-2 py-1 rounded-full w-fit max-w-[160px] overflow-hidden text-[10px]">
+                                        <i class="fa-solid fa-music text-[9px] shrink-0"></i>
+                                        <div class="overflow-hidden relative w-28 whitespace-nowrap">
+                                            <span id="igMockMusicLabel" class="inline-block marquee-active font-medium font-sans">影片原聲 - sleek_creator</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 右下側互動按鈕直行 (原生 IG 互動標籤) -->
+                                <div class="flex flex-col items-center gap-4 text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]">
+                                    <!-- 愛心按讚 -->
+                                    <div class="flex flex-col items-center cursor-pointer pointer-events-auto group/heart" id="mockHeartBtn">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center transition-transform active:scale-90">
+                                            <i class="fa-solid fa-heart text-xl transition-colors duration-200" id="mockHeartIcon"></i>
+                                        </div>
+                                        <span class="text-[10px] font-semibold mt-0.5 animate-pulse" id="mockLikeCount">82.3k</span>
+                                    </div>
+
+                                    <!-- 留言標籤 -->
+                                    <div class="flex flex-col items-center cursor-pointer pointer-events-auto group/comment" id="mockCommentBtn">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center transition-transform active:scale-90">
+                                            <i class="fa-solid fa-comment text-xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-semibold mt-0.5" id="mockCommentCount">512</span>
+                                    </div>
+
+                                    <!-- 分享 -->
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center">
+                                            <i class="fa-solid fa-paper-plane text-lg"></i>
+                                        </div>
+                                        <span class="text-[10px] font-semibold mt-0.5">分享</span>
+                                    </div>
+
+                                    <!-- 收藏 -->
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center">
+                                            <i class="fa-solid fa-bookmark text-lg"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- 黑膠碟旋轉 -->
+                                    <div class="w-7 h-7 rounded-full border border-white/35 p-[1px] bg-black/80 flex items-center justify-center shrink-0">
+                                        <div id="mockAudioDisc" class="w-full h-full rounded-full bg-gray-900 border border-black flex items-center justify-center overflow-hidden">
+                                            <div class="w-2 h-2 rounded-full bg-gray-400 border border-black z-10"></div>
+                                            <div class="absolute inset-0 bg-gradient-to-tr from-purple-800 to-pink-500 opacity-60"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 1:1 影片原生細微播放進度條 (白色進度滑動線) -->
+                            <div class="w-full h-[1.5px] bg-white/20 relative">
+                                <div id="igMockProgressBar" class="absolute left-0 top-0 bottom-0 bg-white/80 w-0"></div>
+                            </div>
+
+                            <!-- 1:1 手機內原生 IG 底部導航欄 -->
+                            <div class="w-full bg-black/95 border-t border-white/5 py-3 px-6 flex items-center justify-between text-white/90 pointer-events-auto shrink-0 select-none z-30">
+                                <button class="hover:text-white transition-colors text-lg"><i class="fa-solid fa-house"></i></button>
+                                <button class="hover:text-white transition-colors text-lg"><i class="fa-solid fa-magnifying-glass"></i></button>
+                                <button class="text-pink-500 hover:text-pink-400 transition-colors text-xl"><i class="fa-solid fa-clapperboard"></i></button>
+                                <button class="hover:text-white transition-colors text-lg"><i class="fa-solid fa-bag-shopping"></i></button>
+                                <div class="w-6 h-6 rounded-full border border-white/40 overflow-hidden flex items-center justify-center shrink-0">
+                                    <div class="w-full h-full bg-gray-850 flex items-center justify-center text-[8px] font-bold text-pink-400">SR</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 手機下方 iOS Home Indicator 橫條 -->
+                <div class="w-full flex justify-center pt-2 pb-1 select-none pointer-events-none">
+                    <div class="w-32 h-1 bg-white/40 rounded-full"></div>
+                </div>
+            </div>
+
+            <!-- 整合式底部時間軸剪輯與播放控制台 -->
+            <div id="integratedController" class="w-full max-w-[340px] md:max-w-[370px] bg-gray-900/90 border border-gray-800/80 rounded-2xl p-4 shadow-xl space-y-3.5 no-select hidden">
+                
+                <!-- 播放控制項 -->
+                <div class="flex items-center justify-between">
+                    <button id="playPauseBtn" class="text-white hover:text-pink-500 transition-colors w-9 h-9 flex items-center justify-center bg-gray-950 border border-gray-800 rounded-full shrink-0">
+                        <i class="fa-solid fa-play text-xs"></i>
+                    </button>
+                    <div class="text-xs font-mono text-gray-400 flex items-center gap-1.5 bg-gray-950/50 px-3 py-1.5 rounded-lg border border-gray-850">
+                        <span id="currentTimeDisplay" class="text-pink-400 font-bold">00:00</span>
+                        <span class="text-gray-600">/</span>
+                        <span id="durationDisplay">00:00</span>
+                    </div>
+                    <span id="clipDurationText" class="text-[11px] text-pink-400 font-bold bg-pink-500/10 px-2.5 py-1 rounded-full border border-pink-500/10">
+                        15.0s
+                    </span>
+                </div>
+                
+                <!-- 精準雙把手剪輯時間軸軌道 -->
+                <div id="timelineContainer" class="relative h-11 bg-gray-950 rounded-xl overflow-visible cursor-pointer border border-gray-800/60 no-select">
+                    <!-- 剪輯未選取區（左側暗色） -->
+                    <div id="timelineLeftBlank" class="absolute left-0 top-0 bottom-0 bg-black/75 pointer-events-none rounded-l-xl" style="width: 0%;"></div>
+                    
+                    <!-- 剪輯選取發光區 -->
+                    <div id="timelineHighlight" class="absolute top-0 bottom-0 bg-pink-500/10 border-y-2 border-pink-500/80 pointer-events-none" style="left: 0%; right: 0%;"></div>
+                    
+                    <!-- 剪輯未選取區（右側暗色） -->
+                    <div id="timelineRightBlank" class="absolute right-0 top-0 bottom-0 bg-black/75 pointer-events-none rounded-r-xl" style="width: 0%;"></div>
+
+                    <!-- 播放指針 -->
+                    <div id="timelinePlayhead" class="absolute top-0 bottom-0 w-[3px] bg-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.8)] z-10 pointer-events-none" style="left: 0%;">
+                        <div class="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-gray-950"></div>
+                    </div>
+
+                    <!-- 開始端拖拉把手 -->
+                    <div id="timelineStartHandle" class="absolute top-0 bottom-0 w-4.5 bg-gradient-to-r from-pink-500 to-pink-600 rounded-l-lg cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 0%;">
+                        <div class="flex flex-col gap-0.5 items-center">
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                        </div>
+                    </div>
+
+                    <!-- 結束端拖拉把手 -->
+                    <div id="timelineEndHandle" class="absolute top-0 bottom-0 w-4.5 bg-gradient-to-l from-pink-500 to-pink-600 rounded-r-lg cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 100%; transform: translateX(-100%);">
+                        <div class="flex flex-col gap-0.5 items-center">
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 刻度標籤與操作指南 -->
+                <div class="flex justify-between text-[10px] text-gray-500 font-medium">
+                    <span id="timelineStartLabel">影片起點: 0.0s</span>
+                    <span class="text-gray-600 text-center font-semibold">拖曳粉色把手進行影片長度剪片</span>
+                    <span id="timelineEndLabel">影片終點: 15.0s</span>
+                </div>
+            </div>
+
+            <!-- 本地預覽說明 -->
+            <p class="text-[11px] text-gray-500 text-center max-w-[340px]">
+                <i class="fa-solid fa-circle-info text-pink-500 mr-1"></i> 字幕卡片均可直接在預覽畫面上**滑鼠直接拖曳**移動排版！
+            </p>
+        </div>
+
+        <!-- 右側：編輯控制台 -->
+        <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-120px)] pr-1">
+            
+            <!-- 第一步：影片上傳與介面模擬設定 -->
+            <div class="bg-gray-900/60 border border-gray-800/80 rounded-2xl p-5 backdrop-blur-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-xs font-bold">1</span>
+                        <h2 class="font-semibold text-base text-gray-100">影片來源與介面預覽設定</h2>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="videoInfoLabel" class="text-xs text-gray-500">尚未載入影片</span>
+                        <button id="changeVideoBtn" class="hidden bg-gray-800 hover:bg-gray-750 text-white text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-colors border border-gray-700 shadow-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-folder-open"></i> 更換影片
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 智慧預覽介面開關 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                    <div class="bg-gray-950 p-4 rounded-xl border border-gray-800/85 flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs text-pink-400 font-bold flex items-center gap-1.5">
+                                <i class="fa-solid fa-mobile-screen-button"></i> 模擬手機 Reels 介面
+                            </h4>
+                            <p class="text-[10px] text-gray-500 mt-1">在預覽畫面套上 IG 按鈕與貼文，防止文字被遮擋。</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer ml-3">
+                            <input type="checkbox" id="phoneUiToggle" class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-pink-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="bg-gray-950 p-4 rounded-xl border border-gray-850 flex items-center justify-between">
+                        <span class="text-xs text-gray-400" id="totalTimeText">影片總長: 0.0s</span>
+                        <div class="flex items-center gap-2">
+                            <!-- 旋轉影片按鈕 -->
+                            <button id="rotateVideoBtn" class="bg-gray-800 hover:bg-gray-750 text-white text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors border border-gray-700">
+                                <i class="fa-solid fa-rotate-right"></i> 旋轉
+                            </button>
+                            <span class="text-xs text-pink-500 font-semibold flex items-center gap-1"><i class="fa-solid fa-arrows-left-right text-[10px]"></i> 直接拉動左側下方軌道剪片</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 數值輸入與顯示 (供高精準度手動打字微調使用) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="hidden">
+                        <!-- 已整合至左側面板，這裡保留隱藏欄位供 JS 邏輯使用 -->
+                        <input type="number" id="trimStart" value="0" min="0" step="0.1">
+                        <input type="number" id="trimEnd" value="15" min="0.1" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第二步：加上文字標籤 (Text Overlay) —— 多段時間軸與動畫管理器 -->
+            <div class="bg-gray-900/60 border border-gray-800/80 rounded-2xl p-5 backdrop-blur-sm">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-800/60 flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">2</span>
+                        <h2 class="font-semibold text-base text-gray-100">字幕軌道多段管理器 (Subtitles Manager)</h2>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="relative inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="textOverlayEnable" class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            <span class="ml-2 text-xs text-gray-300 font-medium">啟用字幕</span>
+                        </label>
+                        <button id="addSegmentBtn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 shrink-0">
+                            <i class="fa-solid fa-plus text-[10px]"></i> 新增下一段文字
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 智慧分段字幕軌清單列表 -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    
+                    <!-- 左半：分段字幕列表 -->
+                    <div class="lg:col-span-5 space-y-2">
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5">字幕段落列表</label>
+                        <div id="textSegmentsList" class="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                            <!-- JS 動態生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 右半：當前所選文字段落的屬性與樣式編輯器 -->
+                    <div id="segmentEditor" class="lg:col-span-7 bg-gray-950 p-4 rounded-xl border border-gray-850/80 space-y-4">
+                        <div class="flex justify-between items-center pb-2 border-b border-gray-900">
+                            <span class="text-xs font-bold text-amber-400 flex items-center gap-1">
+                                <i class="fa-solid fa-pen-to-square"></i> 段落樣式與時間微調
+                            </span>
+                            <button id="deleteSegmentBtn" class="text-red-500 hover:text-red-400 text-xs flex items-center gap-1" title="刪除選定文字段落">
+                                <i class="fa-solid fa-trash-can"></i> 刪除此段
+                            </button>
+                        </div>
+
+                        <!-- 內容輸入 -->
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-1">文字段落內容</label>
+                            <textarea id="textOverlayContent" rows="2" placeholder="輸入字幕文字內容，可使用 Enter 換行..." class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"></textarea>
+                        </div>
+
+                        <!-- 出現與消失時間設定 -->
+                        <div class="grid grid-cols-2 gap-3 bg-gray-900/40 p-2.5 rounded-lg border border-gray-900">
+                            <div>
+                                <label class="block text-[10px] text-gray-500 mb-1">出現時間 (秒)</label>
+                                <div class="flex gap-1">
+                                    <input type="number" id="textShowStart" value="0.0" min="0" step="0.1" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white">
+                                    <button id="capTextStartBtn" class="bg-gray-800 hover:bg-gray-750 px-1.5 rounded text-[9px] shrink-0">捕捉</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-gray-500 mb-1">消失時間 (秒)</label>
+                                <div class="flex gap-1">
+                                    <input type="number" id="textShowEnd" value="15.0" min="0" step="0.1" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white">
+                                    <button id="capTextEndBtn" class="bg-gray-800 hover:bg-gray-750 px-1.5 rounded text-[9px] shrink-0">捕捉</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 尺寸與窗格寬度 -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] text-gray-500 mb-1">字型大小 (px)</label>
+                                <input type="range" id="textSizeSlider" min="14" max="64" value="28" class="w-full accent-amber-500 bg-gray-900 h-1 rounded-lg appearance-none mt-2.5">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-500 mb-1">字幕窗格寬度 (%) <span id="textWidthLabel" class="text-amber-500">80%</span></label>
+                                <input type="range" id="textWidthSlider" min="20" max="100" value="80" class="w-full accent-amber-500 bg-gray-900 h-1 rounded-lg appearance-none mt-2.5">
+                            </div>
+                        </div>
+
+                        <!-- 動畫與排版對齊 -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[11px] text-gray-500 mb-1">進場動畫</label>
+                                    <select id="textAnimInSelect" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-amber-500">
+                                        <option value="normal">無 (靜態)</option>
+                                        <option value="fade">漸變淡入</option>
+                                        <option value="pop">彈性縮放</option>
+                                        <option value="slide">滑動漸現</option>
+                                        <option value="typewriter">打字機</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-gray-500 mb-1">出場動畫</label>
+                                    <select id="textAnimOutSelect" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-amber-500">
+                                        <option value="normal">無 (靜態)</option>
+                                        <option value="fade">漸變淡出</option>
+                                        <option value="pop">縮放消失</option>
+                                        <option value="slide">滑動隱藏</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-500 mb-1">對齊排版</label>
+                                <div class="flex gap-1 bg-gray-900 p-1 rounded-lg border border-gray-800" id="textAlignGroup">
+                                    <button type="button" data-align="left" class="flex-1 py-1 text-xs rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors align-btn"><i class="fa-solid fa-align-left"></i></button>
+                                    <button type="button" data-align="center" class="flex-1 py-1 text-xs rounded bg-gray-800 text-white transition-colors align-btn"><i class="fa-solid fa-align-center"></i></button>
+                                    <button type="button" data-align="right" class="flex-1 py-1 text-xs rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors align-btn"><i class="fa-solid fa-align-right"></i></button>
+                                    <button type="button" data-align="justify" class="flex-1 py-1 text-xs rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors align-btn" title="分散對齊 (限多行)"><i class="fa-solid fa-align-justify"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 顏色、邊框與背景 -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-900/40 p-3 rounded-lg border border-gray-900">
+                            <!-- 內部左半：主色與背景 -->
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-[11px] text-gray-500">文字顏色</label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-gray-400 font-mono" id="textColorHex">#FFFFFF</span>
+                                        <input type="color" id="textColorPicker" value="#ffffff" class="w-6 h-6 rounded border border-gray-800 bg-transparent cursor-pointer shrink-0">
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <label class="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer">
+                                        <input type="checkbox" id="textBgEnable" class="rounded bg-gray-900 border-gray-800 text-amber-500">
+                                        啟用黑底
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-gray-400 font-mono" id="textBgColorHex">#000000</span>
+                                        <input type="color" id="textBgColorPicker" value="#000000" class="w-6 h-6 rounded border border-gray-800 bg-transparent cursor-pointer shrink-0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 內部右半：邊框粗細與顏色 -->
+                            <div class="space-y-3 pl-0 sm:pl-4 sm:border-l border-gray-800">
+                                <div class="flex items-center justify-between">
+                                    <label class="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer">
+                                        <input type="checkbox" id="textStrokeEnable" class="rounded bg-gray-900 border-gray-800 text-amber-500">
+                                        文字邊框
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-gray-400 font-mono" id="textStrokeColorHex">#000000</span>
+                                        <input type="color" id="textStrokeColorPicker" value="#000000" class="w-6 h-6 rounded border border-gray-800 bg-transparent cursor-pointer shrink-0">
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+                                        <span>邊框粗細</span>
+                                        <span id="textStrokeWidthLabel">4px</span>
+                                    </div>
+                                    <input type="range" id="textStrokeWidthSlider" min="1" max="15" value="4" class="w-full accent-amber-500 bg-gray-900 h-1 rounded-lg appearance-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 排版位置與統一點擊套用 -->
+                        <div class="bg-gray-900/40 p-2.5 rounded-lg border border-gray-900 mt-2">
+                            <div class="flex justify-between items-center text-[10px] text-gray-500 mb-1.5">
+                                <span>當前排版位置 X: <span id="textXLabel" class="text-amber-500 font-bold">10%</span>, Y: <span id="textYLabel" class="text-amber-500 font-bold">15%</span></span>
+                                <button id="applyPositionToAllBtn" class="bg-gray-800 hover:bg-gray-750 text-gray-300 px-2 py-1.5 rounded-md transition-colors flex items-center gap-1">
+                                    <i class="fa-solid fa-align-left"></i> 對齊所有段落
+                                </button>
+                            </div>
+                            <p class="text-[9.5px] text-gray-600 leading-normal">提示：用滑鼠在左側畫面拖拉定位。點擊「對齊所有段落」可將所有文字鎖定至此座標。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第三步：套用專業 LUT 色調濾鏡 (支援自訂 .cube) -->
+            <div class="bg-gray-900/60 border border-gray-800/80 rounded-2xl p-5 backdrop-blur-sm">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 flex items-center justify-center text-xs font-bold">3</span>
+                    <h2 class="font-semibold text-base text-gray-100">套用調色濾鏡 (3D LUT Presets)</h2>
+                </div>
+
+                <!-- 濾鏡卡片網格 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="filterContainer">
+                    
+                    <!-- 上傳自訂 LUT -->
+                    <label class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-dashed border-gray-700 hover:border-violet-500 p-3 rounded-xl text-left transition-all duration-200 flex flex-col items-center justify-center relative cursor-pointer" data-filter="custom">
+                        <input type="file" id="lutUpload" accept=".cube" class="hidden">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-600 group-hover:text-violet-500 mb-2"></i>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">自訂 LUT</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block text-center">點此選擇 .cube</span>
+                    </label>
+
+                    <!-- 原始效果 -->
+                    <button class="filter-card active group bg-gray-950 hover:bg-gray-900 border-2 border-violet-500 p-3 rounded-xl text-left transition-all duration-200" data-filter="normal">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-gray-300">無濾鏡</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">原始效果 (Raw)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">保留原片色溫色調</span>
+                    </button>
+
+                    <!-- 電影質感 (Orange & Teal) -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="cinematic">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-cyan-900 to-amber-800 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-amber-200">Teal & Orange</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">電影 (Teal)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">暖橘高光與冷青陰影</span>
+                    </button>
+
+                    <!-- 暖陽微風 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="sunset">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-amber-700 to-red-800 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-orange-200">Warm Breeze</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">黃昏 (Warm)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">金黃色調，溫暖治癒</span>
+                    </button>
+
+                    <!-- 賽博霓虹 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="cyber">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-purple-900 via-pink-950 to-blue-950 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-pink-300">Neon City</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">賽博龐克</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">高飽和紫粉與未來感藍</span>
+                    </button>
+
+                    <!-- 復古黑白 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="noir">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-gray-900 via-gray-700 to-gray-500 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-white">Classic Noir</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">黑白 (Noir)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">高對比復古底片感</span>
+                    </button>
+
+                    <!-- 寂靜森林 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="forest">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-emerald-950 via-teal-900 to-gray-900 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-emerald-300">Forest Fog</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">冷綠 (Forest)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">低飽和墨綠與神秘感</span>
+                    </button>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-3"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> 注意：上傳高階自訂 3D LUT (.cube) 可能需要耗費較多本機端 CPU 運算資源，若預覽不流暢為正常現象，不影響最終導出畫質。</p>
+            </div>
+
+            <!-- 第四步：背景音樂音軌與剪裁 -->
+            <div class="bg-gray-900/60 border border-gray-800/80 rounded-2xl p-5 backdrop-blur-sm">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold">4</span>
+                    <h2 class="font-semibold text-base text-gray-100">背景音樂音軌 (Audio Track)</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 本地上傳音訊 -->
+                        <div class="bg-gray-950 p-4 rounded-xl border border-gray-850/60 flex flex-col justify-between">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1.5 font-semibold">
+                                    <i class="fa-solid fa-upload text-violet-400 mr-1"></i> 上傳本地 MP3/WAV 檔案
+                                </label>
+                                <p class="text-[10px] text-gray-500">100% 穩定無版權風險，無伺服器上限，請直接上傳電腦中的音效檔。</p>
+                            </div>
+                            <label class="mt-3 bg-gray-900 hover:bg-gray-850 border border-gray-800 text-center text-xs text-gray-300 font-semibold py-2.5 rounded-lg cursor-pointer transition-all block">
+                                瀏覽本機音檔
+                                <input type="file" id="audioUpload" accept="audio/*" class="hidden">
+                            </label>
+                        </div>
+
+                        <!-- 內建無版權音樂免下載 -->
+                        <div class="bg-gray-950 p-4 rounded-xl border border-gray-850/60">
+                            <label class="block text-xs text-gray-400 mb-2 font-semibold">
+                                <i class="fa-solid fa-music text-teal-400 mr-1"></i> 預設推薦音樂檔 (隨選即試)
+                            </label>
+                            <div class="space-y-1.5 max-h-[110px] overflow-y-auto pr-1">
+                                <button class="builtin-track w-full text-left bg-gray-900 hover:bg-gray-850 px-2.5 py-1.5 rounded border border-gray-800 text-xs flex items-center justify-between transition-colors" data-url="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">
+                                    <span class="truncate pr-2 text-gray-300"><i class="fa-solid fa-circle-play mr-1.5 text-teal-500 text-[10px]"></i>輕快電子音樂 01</span>
+                                    <span class="text-[9px] text-gray-500">Demo 1</span>
+                                </button>
+                                <button class="builtin-track w-full text-left bg-gray-900 hover:bg-gray-850 px-2.5 py-1.5 rounded border border-gray-800 text-xs flex items-center justify-between transition-colors" data-url="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3">
+                                    <span class="truncate pr-2 text-gray-300"><i class="fa-solid fa-circle-play mr-1.5 text-teal-500 text-[10px]"></i>迷幻電子音樂 02</span>
+                                    <span class="text-[9px] text-gray-500">Demo 2</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 載入音樂播放條與剪裁工具 -->
+                    <div id="audioWaveformContainer" class="bg-gray-950 p-4 rounded-xl border border-gray-850/60 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-teal-400 font-semibold truncate max-w-[200px]" id="bgmNameText">載入音軌中...</span>
+                            <div class="flex gap-2 text-[10px] text-gray-500">
+                                <span id="bgmTimeDisplay">00:00 / 00:00</span>
+                            </div>
+                        </div>
+                        <audio id="bgmAudio" class="hidden" loop crossorigin="anonymous"></audio>
+                        
+                        <!-- 混音音量調整與原片靜音 -->
+                        <div class="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-gray-900">
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">影片原音音量: <span id="videoVolumeLabel">100%</span></label>
+                                <div class="flex items-center gap-2">
+                                    <button id="videoMuteBtn" class="text-gray-400 hover:text-white transition-colors w-4 flex justify-center"><i class="fa-solid fa-volume-high text-xs"></i></button>
+                                    <input type="range" id="videoVolume" min="0" max="100" value="100" class="w-full accent-pink-500 bg-gray-800 h-1 rounded-lg appearance-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">背景音樂音量: <span id="bgmVolumeLabel">80%</span></label>
+                                <input type="range" id="bgmVolume" min="0" max="100" value="80" class="w-full accent-teal-400 bg-gray-800 h-1 rounded-lg appearance-none mt-1">
+                            </div>
+                        </div>
+
+                        <!-- 🆕 音效區段剪裁工具 (Audio Trimming Timeline) -->
+                        <div class="mt-4 pt-3 border-t border-gray-900">
+                            <div class="flex justify-between text-[11px] text-gray-500 mb-2 select-none">
+                                <span id="audioTimelineStartLabel">音樂起點: 0.0s</span>
+                                <span class="text-teal-400 font-bold">選取長度固定為: <span id="audioClipDurationText">0.0s</span></span>
+                                <span id="audioTimelineEndLabel">音樂終點: 0.0s</span>
+                            </div>
+                            
+                            <!-- 音軌拖曳時間軸 (滑動視窗) -->
+                            <div id="audioTimelineContainer" class="relative h-8 bg-gray-900 rounded-lg overflow-visible cursor-pointer border border-gray-800/60 no-select mb-3">
+                                <div id="audioTimelineLeftBlank" class="absolute left-0 top-0 bottom-0 bg-black/80 pointer-events-none rounded-l-lg" style="width: 0%;"></div>
+                                <div id="audioTimelineHighlight" class="absolute top-0 bottom-0 bg-teal-500/20 border-y-2 border-teal-500/80 pointer-events-none" style="left: 0%; right: 100%;"></div>
+                                <div id="audioTimelineRightBlank" class="absolute right-0 top-0 bottom-0 bg-black/80 pointer-events-none rounded-r-lg" style="width: 0%;"></div>
+
+                                <!-- 開始端拖拉把手 -->
+                                <div id="audioTimelineStartHandle" class="absolute top-0 bottom-0 w-4 bg-gradient-to-r from-teal-500 to-teal-600 rounded-l cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 0%;">
+                                    <div class="flex flex-col gap-0.5 items-center">
+                                        <span class="w-[1.5px] h-2.5 bg-white/80 rounded-full"></span>
+                                    </div>
+                                </div>
+
+                                <!-- 結束端拖拉把手 -->
+                                <div id="audioTimelineEndHandle" class="absolute top-0 bottom-0 w-4 bg-gradient-to-l from-teal-500 to-teal-600 rounded-r cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 100%; transform: translateX(-100%);">
+                                    <div class="flex flex-col gap-0.5 items-center">
+                                        <span class="w-[1.5px] h-2.5 bg-white/80 rounded-full"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 隱藏數值保留連動 -->
+                            <div class="grid grid-cols-2 gap-4 mt-3 hidden">
+                                <input type="number" id="bgmTrimStart" value="0.0">
+                                <input type="number" id="bgmTrimEnd" value="15.0">
+                            </div>
+                            
+                            <p class="text-[9.5px] text-amber-500 mt-2">提示：音軌選取範圍已**自動固定為您的影片剪輯長度**。請直接左右拖拉上方的青綠色滑塊來選擇這段音樂的精華區間！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 極速渲染與導出 -->
+            <div class="bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 border border-pink-500/30 rounded-2xl p-6 text-center shadow-xl">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+                    <div class="text-left">
+                        <h3 class="text-base font-bold text-gray-100 mb-1">準備好您的 Reels 影片了嗎？</h3>
+                        <p class="text-[11px] text-gray-400">在瀏覽器中即時混音、套用調色與字幕，直接進行高保真度錄製。</p>
+                    </div>
+                    
+                    <!-- 導出畫質解析度選擇 -->
+                    <div class="shrink-0 text-left md:text-right">
+                        <label class="block text-[10px] text-gray-500 mb-1">輸出解析度 (Export Resolution)</label>
+                        <select id="exportResolution" class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-pink-500 font-semibold cursor-pointer shadow-sm">
+                            <option value="720">720p (720x1280)</option>
+                            <option value="1080" selected>1080p (1080x1920)</option>
+                            <option value="1440">2K (1440x2560)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 防爆音限制器開關 -->
+                <div class="flex items-center justify-center gap-2 mb-4 bg-gray-950 border border-gray-800 py-2 px-3 rounded-lg w-fit mx-auto">
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" id="audioLimiterEnable" class="sr-only peer" checked>
+                        <div class="w-8 h-4 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-teal-500"></div>
+                        <span class="ml-2 text-[11px] text-gray-300 font-medium"><i class="fa-solid fa-wave-square text-teal-400 mr-1"></i> 啟用防爆音限制器 (Dynamic Limiter)</span>
+                    </label>
+                </div>
+                
+                <button id="exportBtn" disabled class="w-full bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 disabled:from-gray-800 disabled:to-gray-800 disabled:text-gray-500 text-white font-bold px-10 py-3.5 rounded-full shadow-lg transition-all transform hover:scale-[1.01] disabled:scale-100 disabled:cursor-not-allowed text-sm inline-flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-circle-play"></i> 
+                    <span id="exportBtnText">請先上傳影片以啟用匯出</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 輸出中彈出視窗 (Modal) -->
+    <div id="exportModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl relative">
+            <button id="cancelExportBtn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <!-- 渲染動畫中狀態 -->
+            <div id="renderingState">
+                <div class="relative w-28 h-28 mx-auto mb-6">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="56" cy="56" r="48" stroke-width="6" stroke="#1f2937" fill="transparent" />
+                        <circle id="progressCircle" cx="56" cy="56" r="48" stroke-width="6" stroke="url(#gradient)" stroke-dasharray="301.6" stroke-dashoffset="301.6" fill="transparent" stroke-linecap="round" />
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ec4899" />
+                                <stop offset="50%" stop-color="#ef4444" />
+                                <stop offset="100%" stop-color="#eab308" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span id="progressText" class="absolute inset-0 flex items-center justify-center text-lg font-bold text-gray-100">0%</span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-100 mb-2">正在渲染與合成您的 Reels 影片</h3>
+                <p class="text-xs text-gray-400 max-w-xs mx-auto mb-4">正在合併調色、文字浮水印與音樂混音。請保持分頁在前台開啟...</p>
+                <div class="bg-gray-950 px-4 py-2.5 rounded-xl border border-gray-800 text-[10px] text-gray-500 font-mono inline-block">
+                    時間軸進度：<span id="renderingTimeText">0.0s / 0.0s</span>
+                </div>
+            </div>
+
+            <!-- 完成狀態 -->
+            <div id="completedState" class="hidden">
+                <div class="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500 text-green-500 flex items-center justify-center mx-auto mb-6 text-3xl animate-bounce">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-100 mb-2">🎉 您的 Reel 已成功錄製完成！</h3>
+                <p class="text-xs text-gray-400 max-w-xs mx-auto mb-6">已完美套用所選調色，剪輯秒數、混音與文字浮水印已完全同步合併。</p>
+                
+                <div class="flex flex-col gap-3">
+                    <a id="downloadLink" class="bg-gradient-to-r from-pink-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> 下載 Reels 影片 (WebM/MP4)
+                    </a>
+                    <button id="editAgainBtn" class="text-xs text-gray-400 hover:text-white py-2 transition-colors">
+                        返回繼續編輯
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁尾宣告 -->
+    <footer class="border-t border-gray-900 bg-gray-950 py-4 text-center text-xs text-gray-600 mt-auto">
+        <p>&copy; 2026 SleekReels Pro. 純前端渲染架構技術，高規格保障影音不被外部伺服器竊取。</p>
+    </footer>
+
+    <!-- 主要核心邏輯 Script -->
+    <script>
+        // 取得 DOM 元素引用
+        const videoUpload = document.getElementById('videoUpload');
+        const videoPlaceholder = document.getElementById('videoPlaceholder');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const sourceVideo = document.getElementById('sourceVideo');
+        const videoLoadingSpinner = document.getElementById('videoLoadingSpinner');
+        
+        // 底部整合式控制台
+        const integratedController = document.getElementById('integratedController');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+        const durationDisplay = document.getElementById('durationDisplay');
+
+        // 手機與 IG 介面模擬控制項
+        const phoneUiToggle = document.getElementById('phoneUiToggle');
+        const igUiOverlay = document.getElementById('igUiOverlay');
+        const igMockCaption = document.getElementById('igMockCaption');
+        const igMockMusicLabel = document.getElementById('igMockMusicLabel');
+        const mockHeartBtn = document.getElementById('mockHeartBtn');
+        const mockHeartIcon = document.getElementById('mockHeartIcon');
+        const mockLikeCount = document.getElementById('mockLikeCount');
+        const mockAudioDisc = document.getElementById('mockAudioDisc');
+        const mockBackBtn = document.getElementById('mockBackBtn');
+        const mockCommentBtn = document.getElementById('mockCommentBtn');
+        const mockCommentCount = document.getElementById('mockCommentCount');
+        const igMockProgressBar = document.getElementById('igMockProgressBar');
+
+        // 字幕多段管理與表單編輯相關元素
+        const addSegmentBtn = document.getElementById('addSegmentBtn');
+        const textSegmentsList = document.getElementById('textSegmentsList');
+        const segmentEditor = document.getElementById('segmentEditor');
+        const deleteSegmentBtn = document.getElementById('deleteSegmentBtn');
+
+        const textOverlayEnable = document.getElementById('textOverlayEnable');
+        const textOverlayContent = document.getElementById('textOverlayContent');
+        const textSizeSlider = document.getElementById('textSizeSlider');
+        const textWidthSlider = document.getElementById('textWidthSlider');
+        const textWidthLabel = document.getElementById('textWidthLabel');
+        const alignBtns = document.querySelectorAll('.align-btn');
+        const textColorPicker = document.getElementById('textColorPicker');
+        const textColorHex = document.getElementById('textColorHex');
+        const textBgEnable = document.getElementById('textBgEnable');
+        const textBgColorPicker = document.getElementById('textBgColorPicker');
+        const textBgColorHex = document.getElementById('textBgColorHex');
+        const textStrokeEnable = document.getElementById('textStrokeEnable');
+        const textStrokeColorPicker = document.getElementById('textStrokeColorPicker');
+        const textStrokeColorHex = document.getElementById('textStrokeColorHex');
+        const textStrokeWidthSlider = document.getElementById('textStrokeWidthSlider');
+        const textStrokeWidthLabel = document.getElementById('textStrokeWidthLabel');
+        const textAnimInSelect = document.getElementById('textAnimInSelect');
+        const textAnimOutSelect = document.getElementById('textAnimOutSelect');
+        const applyPositionToAllBtn = document.getElementById('applyPositionToAllBtn');
+        
+        // 文字時間與快速捕捉
+        const textShowStart = document.getElementById('textShowStart');
+        const textShowEnd = document.getElementById('textShowEnd');
+        const capTextStartBtn = document.getElementById('capTextStartBtn');
+        const capTextEndBtn = document.getElementById('capTextEndBtn');
+
+        // 剪輯輸入欄位
+        const trimStartInput = document.getElementById('trimStart');
+        const trimEndInput = document.getElementById('trimEnd');
+        const clipDurationText = document.getElementById('clipDurationText');
+        const totalTimeText = document.getElementById('totalTimeText');
+        const videoInfoLabel = document.getElementById('videoInfoLabel');
+        const changeVideoBtn = document.getElementById('changeVideoBtn');
+        const rotateVideoBtn = document.getElementById('rotateVideoBtn');
+
+        // 整合式時間軸元素
+        const timelineContainer = document.getElementById('timelineContainer');
+        const timelineLeftBlank = document.getElementById('timelineLeftBlank');
+        const timelineHighlight = document.getElementById('timelineHighlight');
+        const timelineRightBlank = document.getElementById('timelineRightBlank');
+        const timelinePlayhead = document.getElementById('timelinePlayhead');
+        const timelineStartHandle = document.getElementById('timelineStartHandle');
+        const timelineEndHandle = document.getElementById('timelineEndHandle');
+        const timelineStartLabel = document.getElementById('timelineStartLabel');
+        const timelineEndLabel = document.getElementById('timelineEndLabel');
+
+        // 隱藏的原生 X, Y 位置滑條
+        const textXSlider = document.getElementById('textXSlider');
+        const textYSlider = document.getElementById('textYSlider');
+        const textXLabel = document.getElementById('textXLabel');
+        const textYLabel = document.getElementById('textYLabel');
+
+        // 濾鏡與音軌
+        const filterCards = document.querySelectorAll('.filter-card');
+        const audioUpload = document.getElementById('audioUpload');
+        const builtinTracks = document.querySelectorAll('.builtin-track');
+        const audioWaveformContainer = document.getElementById('audioWaveformContainer');
+        const bgmAudio = document.getElementById('bgmAudio');
+        const bgmNameText = document.getElementById('bgmNameText');
+        const bgmTimeDisplay = document.getElementById('bgmTimeDisplay');
+        
+        // 影片靜音與音量
+        const videoVolume = document.getElementById('videoVolume');
+        const videoMuteBtn = document.getElementById('videoMuteBtn');
+        const bgmVolume = document.getElementById('bgmVolume');
+        const videoVolumeLabel = document.getElementById('videoVolumeLabel');
+        const bgmVolumeLabel = document.getElementById('bgmVolumeLabel');
+
+        // 音效區段剪裁工具
+        const bgmTrimStart = document.getElementById('bgmTrimStart');
+        const bgmTrimEnd = document.getElementById('bgmTrimEnd');
+        
+        const audioTimelineContainer = document.getElementById('audioTimelineContainer');
+        const audioTimelineLeftBlank = document.getElementById('audioTimelineLeftBlank');
+        const audioTimelineHighlight = document.getElementById('audioTimelineHighlight');
+        const audioTimelineRightBlank = document.getElementById('audioTimelineRightBlank');
+        const audioTimelineStartHandle = document.getElementById('audioTimelineStartHandle');
+        const audioTimelineEndHandle = document.getElementById('audioTimelineEndHandle');
+        const audioTimelineStartLabel = document.getElementById('audioTimelineStartLabel');
+        const audioTimelineEndLabel = document.getElementById('audioTimelineEndLabel');
+        const audioClipDurationText = document.getElementById('audioClipDurationText');
+
+        // 匯出相關
+        const exportBtn = document.getElementById('exportBtn');
+        const exportBtnText = document.getElementById('exportBtnText');
+        const exportModal = document.getElementById('exportModal');
+        const cancelExportBtn = document.getElementById('cancelExportBtn');
+        const progressCircle = document.getElementById('progressCircle');
+        const progressText = document.getElementById('progressText');
+        const renderingTimeText = document.getElementById('renderingTimeText');
+        const renderingState = document.getElementById('renderingState');
+        const completedState = document.getElementById('completedState');
+        const downloadLink = document.getElementById('downloadLink');
+        const editAgainBtn = document.getElementById('editAgainBtn');
+        const exportResolution = document.getElementById('exportResolution');
+        const audioLimiterEnable = document.getElementById('audioLimiterEnable');
+
+        // 全域變數定義
+        let videoLoaded = false;
+        let selectedFilter = 'normal';
+        let animationFrameId = null;
+        let isExporting = false;
+        let ctx = previewCanvas.getContext('2d');
+        let videoRotation = 0; 
+
+        // 自訂 LUT 解析資料緩存區
+        let customLUTData = null;
+        let customLUTSize = 0;
+
+        // 原片音量與靜音狀態
+        let isVideoMuted = false;
+        let prevVideoVol = 100;
+
+        // 音樂時間軸狀態
+        let isDraggingAudioTimeline = false;
+        let activeAudioHandle = null;
+
+        // 字幕多段軌道陣列（每段字幕皆包含獨立屬性）
+        let textSegments = [
+            {
+                id: 'seg_default_1',
+                text: '這是一段很長很長的字幕測試，它會自動根據您設定的窗格寬度進行智慧換行排版！',
+                start: 0.0,
+                end: 5.0,
+                animIn: 'pop',
+                animOut: 'fade',
+                size: 28,
+                boxWidth: 80,
+                align: 'center',
+                color: '#ffffff',
+                bgEnable: true,
+                bgColor: '#000000',
+                strokeEnable: false,
+                strokeColor: '#000000',
+                strokeWidth: 4,
+                x: 10,
+                y: 15
+            },
+            {
+                id: 'seg_default_2',
+                text: '可切換粗邊框字\n也支援 Enter 手動斷行',
+                start: 5.0,
+                end: 10.0,
+                animIn: 'typewriter',
+                animOut: 'normal',
+                size: 32,
+                boxWidth: 90,
+                align: 'left',
+                color: '#ffeb3b',
+                bgEnable: false,
+                bgColor: '#000000',
+                strokeEnable: true,
+                strokeColor: '#000000',
+                strokeWidth: 6,
+                x: 5,
+                y: 25
+            }
+        ];
+        
+        let activeSegmentId = 'seg_default_1'; 
+
+        let activeDragItem = null; 
+        let dragStartOffsetX = 0;
+        let dragStartOffsetY = 0;
+
+        // 時間軸滑動交互狀態
+        let isDraggingTimeline = false;
+        let activeHandle = null; 
+
+        // 原生模擬互動狀態
+        let isLiked = false;
+        let isCommented = false;
+
+        // 儲存所有當前可見字幕段落的 2D 碰撞邊界框（用於 Hit-test 自動識別所選文字段落）
+        let textHitboxes = {};
+
+        // 初始化事件
+        window.addEventListener('load', () => {
+            setupVideoEventListeners();
+            setupFilterSelection();
+            setupAudioHandlers();
+            setupExportPipeline();
+            setupTextOverlayHandlers();
+            setupDraggableTimeline();
+            setupIgUiOverlayHandlers();
+            setupQuickCaptureButtons();
+            
+            // 初始化字幕軌道 UI
+            renderSegmentsList();
+            syncActiveSegmentUI();
+        });
+
+        // 設置影片事件監聽
+        function setupVideoEventListeners() {
+            videoUpload.addEventListener('change', handleVideoUpload);
+            
+            // 點擊 Canvas 播放 / 暫停 (若不是正在拖曳)
+            previewCanvas.addEventListener('click', (e) => {
+                if (activeDragItem) return;
+                togglePlay();
+            });
+            if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
+
+            sourceVideo.addEventListener('loadedmetadata', () => {
+                videoLoaded = true;
+                if (videoLoadingSpinner) videoLoadingSpinner.classList.add('hidden');
+                if (videoPlaceholder) videoPlaceholder.classList.add('hidden');
+                if (previewCanvas) previewCanvas.classList.remove('hidden');
+                if (integratedController) integratedController.classList.remove('hidden'); 
+                
+                // 設定預覽畫布解析度 (以 9:16 reels 直立呈現)
+                if (previewCanvas) {
+                    previewCanvas.width = 360;
+                    previewCanvas.height = 640;
+                }
+
+                const duration = sourceVideo.duration;
+                if (totalTimeText) totalTimeText.textContent = `影片總長: ${duration.toFixed(1)}s`;
+                if (videoInfoLabel) videoInfoLabel.textContent = `原始尺寸: ${sourceVideo.videoWidth}x${sourceVideo.videoHeight} | 時長: ${duration.toFixed(1)}s`;
+
+                // 顯示更換影片按鈕
+                if (changeVideoBtn) changeVideoBtn.classList.remove('hidden');
+
+                // 初始化時間剪輯值
+                if (trimStartInput) {
+                    trimStartInput.value = "0.0";
+                    trimStartInput.max = duration;
+                }
+                
+                const endVal = Math.min(15, duration);
+                if (trimEndInput) {
+                    trimEndInput.value = endVal.toFixed(1);
+                    trimEndInput.max = duration;
+                }
+
+                // 初始化字幕結束秒數
+                if (textShowEnd) textShowEnd.value = endVal.toFixed(1);
+
+                // 同步更新時間軸上的刻度與位置
+                updateVisualTimeline();
+                // 🆕 當影片載入時，強制同步音軌區塊的滑窗 UI 限制
+                if (window.enforceBgmWindow) enforceBgmWindow();
+
+                // 啟用導出按鈕
+                if (exportBtn) {
+                    exportBtn.disabled = false;
+                    exportBtnText.textContent = '匯出您的 Reels 影片 (WebM)';
+                }
+
+                // 開始影片播放
+                sourceVideo.currentTime = 0;
+                sourceVideo.play();
+                if (bgmAudio.src) {
+                    syncBgmTime();
+                    bgmAudio.play();
+                }
+                updatePlayPauseIcon(true);
+                startCanvasRenderLoop();
+            });
+
+            // 確保音樂與影片快轉時同步
+            sourceVideo.addEventListener('seeked', () => {
+                if (bgmAudio.src) syncBgmTime();
+            });
+            sourceVideo.addEventListener('play', () => {
+                if (bgmAudio.src) {
+                    syncBgmTime();
+                    bgmAudio.play();
+                }
+                if (mockAudioDisc) mockAudioDisc.classList.add('spin-active');
+            });
+            sourceVideo.addEventListener('pause', () => {
+                if (bgmAudio.src) bgmAudio.pause();
+                if (mockAudioDisc) mockAudioDisc.classList.remove('spin-active');
+            });
+
+            sourceVideo.addEventListener('timeupdate', () => {
+                if (isExporting) return;
+                
+                const current = sourceVideo.currentTime;
+                const start = parseFloat(trimStartInput.value) || 0;
+                const end = parseFloat(trimEndInput.value) || sourceVideo.duration;
+
+                // 限制影片只在剪輯區間內循環
+                if (current < start) {
+                    sourceVideo.currentTime = start;
+                } else if (current > end) {
+                    sourceVideo.currentTime = start;
+                    if (bgmAudio.src) syncBgmTime();
+                }
+
+                // 僅在沒有手動拖拉時間軸時，更新控制器上的播放進度數值
+                if (!isDraggingTimeline) {
+                    const displayTime = Math.max(0, current - start);
+                    const clipLength = end - start;
+                    if (currentTimeDisplay) currentTimeDisplay.textContent = formatTime(displayTime);
+                    if (durationDisplay) durationDisplay.textContent = formatTime(clipLength);
+                }
+
+                // 原生細微進度滑動條 (同步手機版上的進度條百分比)
+                if (igMockProgressBar && sourceVideo.duration) {
+                    const displayTime = Math.max(0, current - start);
+                    const clipLength = end - start;
+                    const percent = clipLength > 0 ? (displayTime / clipLength) * 100 : 0;
+                    igMockProgressBar.style.width = `${percent}%`;
+                }
+
+                // 同步更新整合時間軸上的黃色播放針 (Playhead)
+                if (sourceVideo.duration && timelinePlayhead) {
+                    const playheadPercent = (current / sourceVideo.duration) * 100;
+                    timelinePlayhead.style.left = `${playheadPercent}%`;
+                }
+            });
+        }
+
+        // 處理影片拖曳/上傳
+        function handleVideoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (videoLoadingSpinner) videoLoadingSpinner.classList.remove('hidden');
+            const fileURL = URL.createObjectURL(file);
+            sourceVideo.src = fileURL;
+        }
+
+        // 綁定更換影片按鈕
+        if (changeVideoBtn) {
+            changeVideoBtn.addEventListener('click', () => {
+                if (videoUpload) videoUpload.click();
+            });
+        }
+        
+        // 旋轉影片按鈕
+        if (rotateVideoBtn) {
+            rotateVideoBtn.addEventListener('click', () => {
+                videoRotation = (videoRotation + 90) % 360;
+                redrawPreviewAndLabels();
+            });
+        }
+
+        // 播放 / 暫停
+        function togglePlay() {
+            if (!videoLoaded) return;
+            if (sourceVideo.paused) {
+                const start = parseFloat(trimStartInput.value) || 0;
+                if (sourceVideo.currentTime >= parseFloat(trimEndInput.value)) {
+                    sourceVideo.currentTime = start;
+                    if (bgmAudio.src) syncBgmTime();
+                }
+                sourceVideo.play();
+                updatePlayPauseIcon(true);
+            } else {
+                sourceVideo.pause();
+                updatePlayPauseIcon(false);
+            }
+        }
+
+        function updatePlayPauseIcon(isPlaying) {
+            if (!playPauseBtn) return;
+            if (isPlaying) {
+                playPauseBtn.innerHTML = '<i class="fa-solid fa-pause text-xs"></i>';
+            } else {
+                playPauseBtn.innerHTML = '<i class="fa-solid fa-play text-xs"></i>';
+            }
+        }
+
+        function redrawPreviewAndLabels() {
+            if (videoLoaded) {
+                drawVideoWithLUT(previewCanvas, ctx, sourceVideo, selectedFilter, true);
+            }
+        }
+
+        function startCanvasRenderLoop() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            function drawFrame() {
+                drawVideoWithLUT(previewCanvas, ctx, sourceVideo, selectedFilter, true);
+                animationFrameId = requestAnimationFrame(drawFrame);
+            }
+            drawFrame();
+        }
+
+        // 濾鏡 CSS 輔助函數
+        function getCSSFilterString(filterName) {
+            switch (filterName) {
+                case 'cinematic': return 'contrast(1.2) saturate(1.15) hue-rotate(-12deg) sepia(0.12)';
+                case 'sunset': return 'sepia(0.4) saturate(1.4) contrast(1.1) brightness(1.05) hue-rotate(-6deg)';
+                case 'cyber': return 'hue-rotate(130deg) saturate(1.8) contrast(1.25)';
+                case 'noir': return 'grayscale(1) contrast(1.4) brightness(0.95)';
+                case 'forest': return 'hue-rotate(-40deg) saturate(0.8) contrast(1.15) brightness(0.92)';
+                default: return 'none';
+            }
+        }
+
+        // 核心繪製邏輯：繪製影片，並透過迴圈繪製「所有在當前秒數內」生效的文字段落（支援獨立進出場動畫與自訂 LUT 引擎）
+        function drawVideoWithLUT(canvas, canvasCtx, videoElement, filterName, updateHitbox = false) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const curr = videoElement.currentTime;
+
+            // 1. 清理為純黑底色 (避免 Fit 出現透明區域)
+            canvasCtx.fillStyle = '#000000';
+            canvasCtx.fillRect(0, 0, w, h);
+            
+            if (updateHitbox) {
+                textHitboxes = {}; // 重置所有文字段落的 Hitbox 碰撞檢測框
+            }
+
+            // 2. 比例自適應 Fit 演算法 (不強制裁切，留黑邊) + 支援旋轉
+            let isRotated = videoRotation % 180 !== 0;
+            let origW = videoElement.videoWidth;
+            let origH = videoElement.videoHeight;
+            let vW = isRotated ? origH : origW;
+            let vH = isRotated ? origW : origH;
+            
+            // 計算最佳縮放比例 (Contain) 讓影片完全放入畫面中
+            let scale = Math.min(w / vW, h / vH);
+            let finalW = origW * scale;
+            let finalH = origH * scale;
+
+            // 3. 直接在繪製原影片前套用濾鏡與旋轉
+            canvasCtx.save();
+            if (filterName !== 'normal' && filterName !== 'custom') {
+                canvasCtx.filter = getCSSFilterString(filterName);
+            }
+            
+            // 移至畫布中心點進行旋轉與縮放繪製 (完美避開裁切)
+            canvasCtx.translate(w / 2, h / 2);
+            canvasCtx.rotate((videoRotation * Math.PI) / 180);
+            canvasCtx.drawImage(videoElement, -finalW / 2, -finalH / 2, finalW, finalH);
+            
+            canvasCtx.restore(); // 將 filter 與變形還原，讓後續文字與畫布處理不受影響
+
+            // 純前端高效能 3D LUT (CPU Interpolation) 套用運算
+            if (filterName === 'custom' && customLUTData && customLUTSize > 0) {
+                // 讀取當前畫布象素陣列
+                const frameData = canvasCtx.getImageData(0, 0, w, h);
+                const d = frameData.data;
+                const s = customLUTSize;
+                const s2 = s * s;
+                
+                // Nearest Neighbor 演算法
+                for (let i = 0; i < d.length; i += 4) {
+                    let r = d[i] / 255 * (s - 1);
+                    let g = d[i+1] / 255 * (s - 1);
+                    let b = d[i+2] / 255 * (s - 1);
+
+                    let ri = Math.round(r);
+                    let gi = Math.round(g);
+                    let bi = Math.round(b);
+
+                    let idx = (ri + gi * s + bi * s2) * 3;
+                    d[i] = customLUTData[idx] * 255;
+                    d[i+1] = customLUTData[idx+1] * 255;
+                    d[i+2] = customLUTData[idx+2] * 255;
+                }
+                // 覆寫回畫布
+                canvasCtx.putImageData(frameData, 0, 0);
+            }
+
+            // 4. 多字幕段落渲染：引入動態比例縮放引擎 (Scale Factor)
+            // 由於 previewCanvas 高度是 640，而 exportCanvas 是 1280 (或是其他)，
+            // 所有絕對數值 (字體大小, padding, 邊框粗細, 動畫位移) 必須乘上 scaleFactor，才能確保排版比例 100% 一致。
+            const scaleFactor = h / 640; 
+
+            if (textOverlayEnable && textOverlayEnable.checked) {
+                
+                // 為使模擬貼文 caption 同步，先抓取目前時間軸上可見的第一個字幕做為同步來源
+                let firstVisibleCaption = "";
+
+                textSegments.forEach(seg => {
+                    const startVal = parseFloat(seg.start) || 0;
+                    const endVal = parseFloat(seg.end) || 15;
+
+                    if (curr >= startVal && curr <= endVal) {
+                        canvasCtx.save();
+
+                        if (!firstVisibleCaption) {
+                            firstVisibleCaption = seg.text;
+                        }
+
+                        // 計算動畫進度 progress (0.0 至 1.0)
+                        let progress = 1.0;
+                        let phase = 'middle';
+                        const easeDuration = 0.4; 
+
+                        if (curr < startVal + easeDuration) {
+                            progress = (curr - startVal) / easeDuration;
+                            progress = Math.max(0, Math.min(1, progress));
+                            phase = 'in';
+                        } else if (curr > endVal - easeDuration) {
+                            progress = (endVal - curr) / easeDuration;
+                            progress = Math.max(0, Math.min(1, progress));
+                            phase = 'out';
+                        }
+
+                        // 將字體大小乘上解析度縮放因子
+                        const size = parseInt(seg.size) * scaleFactor;
+                        canvasCtx.textBaseline = 'top'; 
+                        canvasCtx.textAlign = 'left';    
+                        canvasCtx.font = `bold ${size}px "Noto Sans TC", sans-serif`;
+
+                        // 智慧換行演算法 (Text Wrapping Logic)
+                        // 由於 canvas.width (w) 本身就隨解析度縮放，因此 maxWidth 照舊
+                        const maxWidth = (seg.boxWidth / 100) * w;
+                        const lineHeight = size * 1.35;
+                        
+                        let paragraphs = (seg.text || "").split('\n');
+                        let lines = [];
+                        
+                        paragraphs.forEach(p => {
+                            if (p === '') {
+                                lines.push('');
+                                return;
+                            }
+                            let currentLine = '';
+                            for(let i = 0; i < p.length; i++) {
+                                let char = p[i];
+                                let testLine = currentLine + char;
+                                let metrics = canvasCtx.measureText(testLine);
+                                if (metrics.width > maxWidth && i > 0) {
+                                    lines.push(currentLine);
+                                    currentLine = char;
+                                } else {
+                                    currentLine = testLine;
+                                }
+                            }
+                            if (currentLine) lines.push(currentLine);
+                        });
+
+                        const textHeight = lines.length * lineHeight;
+                        
+                        // Padding 乘上縮放因子
+                        const padding = (seg.bgEnable ? 12 : 0) * scaleFactor;
+                        const rectW = maxWidth + padding * 2;
+                        const rectH = textHeight + padding * 2;
+
+                        const rectX = (seg.x / 100) * w;
+                        const rectY = (seg.y / 100) * h;
+
+                        if (updateHitbox) {
+                            // 在預覽模式下 (scaleFactor = 1)，記錄下來供滑鼠 hit test 使用
+                            textHitboxes[seg.id] = { x: rectX, y: rectY, w: rectW, h: rectH };
+                        }
+
+                        // 根據所處階段決定當下使用的動畫設定
+                        let currentAnimType = 'normal';
+                        if (phase === 'in') currentAnimType = seg.animIn;
+                        if (phase === 'out') currentAnimType = seg.animOut;
+
+                        // 套用 Canvas 特效轉換
+                        if (currentAnimType === 'fade') {
+                            canvasCtx.globalAlpha = progress;
+                        } else if (currentAnimType === 'pop') {
+                            const centerX = rectX + rectW / 2;
+                            const centerY = rectY + rectH / 2;
+                            canvasCtx.translate(centerX, centerY);
+                            canvasCtx.scale(progress, progress);
+                            canvasCtx.translate(-centerX, -centerY);
+                        } else if (currentAnimType === 'slide') {
+                            // 偏移量也需乘上縮放因子
+                            const offsetY = (1 - progress) * (35 * scaleFactor);
+                            canvasCtx.translate(0, phase === 'in' ? offsetY : -offsetY); 
+                            canvasCtx.globalAlpha = progress;
+                        }
+
+                        // 繪製黑底背景框
+                        if (seg.bgEnable) {
+                            canvasCtx.fillStyle = seg.bgColor;
+                            canvasCtx.fillRect(rectX, rectY, rectW, rectH);
+                        }
+
+                        // 打字機字數判定 (僅於進場設定套用)
+                        let visibleLength = seg.text.length;
+                        if (seg.animIn === 'typewriter') {
+                            const enterProgress = Math.max(0, Math.min(1, (curr - startVal) / 1.0)); 
+                            visibleLength = Math.floor(seg.text.length * enterProgress);
+                        }
+
+                        let charsDrawn = 0;
+
+                        // 逐行與對齊繪製
+                        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+                            let line = lines[lineIndex];
+                            if (line === '') {
+                                charsDrawn += 1; 
+                                continue;
+                            }
+                            
+                            let lineY = rectY + padding + (lineIndex * lineHeight);
+                            let lineWidth = canvasCtx.measureText(line).width;
+                            let startX = rectX + padding;
+                            
+                            // 根據屬性對齊計算 X
+                            if (seg.align === 'center') {
+                                startX += (maxWidth - lineWidth) / 2;
+                            } else if (seg.align === 'right') {
+                                startX += (maxWidth - lineWidth);
+                            }
+
+                            // 處理分散對齊 (Justify) 的額外間距
+                            let spacePerChar = 0;
+                            if (seg.align === 'justify' && lineIndex < lines.length - 1 && line.length > 1) {
+                                spacePerChar = (maxWidth - lineWidth) / (line.length - 1);
+                            }
+
+                            let currentX = startX;
+                            for (let c = 0; c < line.length; c++) {
+                                if (charsDrawn >= visibleLength) break;
+                                
+                                let char = line[c];
+                                let charWidth = canvasCtx.measureText(char).width;
+
+                                // 繪製文字邊框 (Stroke) - 粗細乘上縮放因子
+                                if (seg.strokeEnable) {
+                                    canvasCtx.lineWidth = seg.strokeWidth * scaleFactor;
+                                    canvasCtx.strokeStyle = seg.strokeColor;
+                                    canvasCtx.lineJoin = 'round';
+                                    canvasCtx.strokeText(char, currentX, lineY);
+                                }
+                                
+                                // 繪製文字本身 (Fill)
+                                canvasCtx.fillStyle = seg.color;
+                                canvasCtx.fillText(char, currentX, lineY);
+
+                                currentX += charWidth + spacePerChar;
+                                charsDrawn++;
+                            }
+                            
+                            if (charsDrawn < visibleLength && lineIndex < lines.length - 1) {
+                                charsDrawn++; 
+                            }
+                        }
+
+                        // 高亮標示選取的段落虛線框 (也需跟隨縮放)
+                        if (seg.id === activeSegmentId && (sourceVideo.paused || activeDragItem)) {
+                            canvasCtx.lineWidth = 1.5 * scaleFactor;
+                            canvasCtx.strokeStyle = '#ffffff';
+                            canvasCtx.setLineDash([4 * scaleFactor, 3 * scaleFactor]);
+                            canvasCtx.strokeRect(rectX - 2 * scaleFactor, rectY - 2 * scaleFactor, rectW + 4 * scaleFactor, rectH + 4 * scaleFactor);
+                            
+                            canvasCtx.fillStyle = '#f59e0b';
+                            canvasCtx.beginPath();
+                            canvasCtx.arc(rectX - 2 * scaleFactor, rectY - 2 * scaleFactor, 4.5 * scaleFactor, 0, Math.PI * 2);
+                            canvasCtx.fill();
+                        }
+
+                        canvasCtx.restore();
+                    }
+                });
+
+                // 同步更新手機版 IG 原生說明文字
+                if (firstVisibleCaption && igMockCaption) {
+                    igMockCaption.textContent = firstVisibleCaption.replace(/\n/g, ' '); 
+                }
+            }
+        }
+
+        // ==========================================
+        // 自訂 .cube 3D LUT 解析邏輯
+        // ==========================================
+        const lutUpload = document.getElementById('lutUpload');
+        if (lutUpload) {
+            lutUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const content = evt.target.result;
+                    parseCubeLUT(content);
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function parseCubeLUT(text) {
+            const lines = text.split('\n');
+            let size = 0;
+            let data = [];
+            for (let line of lines) {
+                line = line.trim();
+                if (line.startsWith('#') || line === '') continue;
+                if (line.match(/^LUT_3D_SIZE/i)) {
+                    size = parseInt(line.split(/\s+/)[1]);
+                    continue;
+                }
+                const parts = line.split(/\s+/).filter(Boolean); // 過濾掉空白
+                if (parts.length >= 3) {
+                    const r = parseFloat(parts[0]);
+                    const g = parseFloat(parts[1]);
+                    const b = parseFloat(parts[2]);
+                    if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+                        data.push(r, g, b);
+                    }
+                }
+            }
+            if (size > 0 && data.length === size * size * size * 3) {
+                customLUTSize = size;
+                customLUTData = data;
+                showBannerNotification(`自訂 LUT (.cube) 載入成功！品質: ${size}x${size}x${size}`, 'success');
+
+                // 自動切換濾鏡至 Custom
+                filterCards.forEach(c => c.classList.remove('active', 'border-violet-500', 'border-solid'));
+                const customCard = document.querySelector('[data-filter="custom"]');
+                if (customCard) {
+                    customCard.classList.add('active', 'border-violet-500');
+                    customCard.classList.remove('border-dashed', 'border-gray-700');
+                }
+                selectedFilter = 'custom';
+                redrawPreviewAndLabels();
+            } else {
+                showBannerNotification('LUT 檔案解析失敗，請確保為標準 3D .cube 格式。', 'error');
+            }
+        }
+
+        // ==========================================
+        // 字幕段落多軌管理器與 UI 同步渲染邏輯
+        // ==========================================
+        
+        // 渲染字幕段落清單 (右側 Step 2 清單)
+        function renderSegmentsList() {
+            if (!textSegmentsList) return;
+            textSegmentsList.innerHTML = '';
+            
+            textSegments.forEach((seg, index) => {
+                const isActive = seg.id === activeSegmentId;
+                
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border transition-all cursor-pointer ${isActive ? 'bg-amber-500/10 border-amber-500' : 'bg-gray-950 border-gray-850 hover:bg-gray-900'}`;
+                
+                // 點擊事件：切換段落 focus
+                card.addEventListener('click', () => {
+                    activeSegmentId = seg.id;
+                    renderSegmentsList();
+                    syncActiveSegmentUI();
+                    redrawPreviewAndLabels();
+                    
+                    if (videoLoaded) {
+                        sourceVideo.currentTime = seg.start;
+                    }
+                });
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-1.5 mb-1">
+                        <span class="text-[11px] font-bold text-gray-400">段落 ${index + 1}</span>
+                        <span class="text-[10px] font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">${seg.start.toFixed(1)}s - ${seg.end.toFixed(1)}s</span>
+                    </div>
+                    <p class="text-xs truncate text-gray-200 font-semibold">${seg.text || '(空白段落)'}</p>
+                    <div class="flex justify-between items-center mt-1.5 pt-1.5 border-t border-gray-900/50 text-[10px] text-gray-500">
+                        <span>進: ${getAnimLabel(seg.animIn)} | 出: ${getAnimLabel(seg.animOut)}</span>
+                        <span>大小: ${seg.size}px</span>
+                    </div>
+                `;
+
+                textSegmentsList.appendChild(card);
+            });
+        }
+
+        // 同步當前選中段落的屬性至編輯表單中
+        function syncActiveSegmentUI() {
+            const seg = textSegments.find(s => s.id === activeSegmentId);
+            if (!seg) {
+                if (segmentEditor) segmentEditor.classList.add('opacity-50', 'pointer-events-none');
+                return;
+            }
+            if (segmentEditor) segmentEditor.classList.remove('opacity-50', 'pointer-events-none');
+
+            // 填寫表單數值
+            if (textOverlayContent) textOverlayContent.value = seg.text;
+            if (textShowStart) textShowStart.value = seg.start.toFixed(1);
+            if (textShowEnd) textShowEnd.value = seg.end.toFixed(1);
+            if (textAnimInSelect) textAnimInSelect.value = seg.animIn;
+            if (textAnimOutSelect) textAnimOutSelect.value = seg.animOut;
+            if (textSizeSlider) textSizeSlider.value = seg.size;
+            
+            // 寬度與對齊
+            if (textWidthSlider) {
+                textWidthSlider.value = seg.boxWidth;
+                if (textWidthLabel) textWidthLabel.textContent = `${seg.boxWidth}%`;
+            }
+            if (alignBtns) {
+                alignBtns.forEach(btn => {
+                    if (btn.getAttribute('data-align') === seg.align) {
+                        btn.classList.add('bg-gray-800', 'text-white');
+                        btn.classList.remove('text-gray-400', 'hover:bg-gray-800');
+                    } else {
+                        btn.classList.remove('bg-gray-800', 'text-white');
+                        btn.classList.add('text-gray-400', 'hover:bg-gray-800');
+                    }
+                });
+            }
+
+            if (textColorPicker) textColorPicker.value = seg.color;
+            if (textColorHex) textColorHex.textContent = seg.color.toUpperCase();
+            if (textBgEnable) textBgEnable.checked = seg.bgEnable;
+            if (textBgColorPicker) textBgColorPicker.value = seg.bgColor;
+            if (textBgColorHex) textBgColorHex.textContent = seg.bgColor.toUpperCase();
+
+            // 邊框設置
+            if (textStrokeEnable) textStrokeEnable.checked = seg.strokeEnable;
+            if (textStrokeColorPicker) textStrokeColorPicker.value = seg.strokeColor;
+            if (textStrokeColorHex) textStrokeColorHex.textContent = seg.strokeColor.toUpperCase();
+            if (textStrokeWidthSlider) {
+                textStrokeWidthSlider.value = seg.strokeWidth;
+                if (textStrokeWidthLabel) textStrokeWidthLabel.textContent = `${seg.strokeWidth}px`;
+            }
+
+            if (textXLabel) textXLabel.textContent = `${seg.x}%`;
+            if (textYLabel) textYLabel.textContent = `${seg.y}%`;
+        }
+
+        // 綁定編輯器屬性修改事件 (連動 activeSegment)
+        function bindSegmentEditorEvents() {
+            const updateField = (key, value) => {
+                const seg = textSegments.find(s => s.id === activeSegmentId);
+                if (seg) {
+                    seg[key] = value;
+                    renderSegmentsList();
+                    redrawPreviewAndLabels();
+                }
+            };
+
+            if (textOverlayContent) textOverlayContent.addEventListener('input', (e) => updateField('text', e.target.value));
+            if (textAnimInSelect) textAnimInSelect.addEventListener('change', (e) => updateField('animIn', e.target.value));
+            if (textAnimOutSelect) textAnimOutSelect.addEventListener('change', (e) => updateField('animOut', e.target.value));
+            if (textSizeSlider) textSizeSlider.addEventListener('input', (e) => updateField('size', parseInt(e.target.value)));
+            
+            // 寬度與對齊
+            if (textWidthSlider) {
+                textWidthSlider.addEventListener('input', (e) => {
+                    if (textWidthLabel) textWidthLabel.textContent = `${e.target.value}%`;
+                    updateField('boxWidth', parseInt(e.target.value));
+                });
+            }
+            if (alignBtns) {
+                alignBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const alignVal = e.currentTarget.getAttribute('data-align');
+                        updateField('align', alignVal);
+                        syncActiveSegmentUI(); // 刷新按鈕外觀
+                    });
+                });
+            }
+
+            if (textColorPicker) {
+                textColorPicker.addEventListener('input', (e) => {
+                    if (textColorHex) textColorHex.textContent = e.target.value.toUpperCase();
+                    updateField('color', e.target.value);
+                });
+            }
+
+            if (textBgEnable) textBgEnable.addEventListener('change', (e) => updateField('bgEnable', e.target.checked));
+            if (textBgColorPicker) {
+                textBgColorPicker.addEventListener('input', (e) => {
+                    if (textBgColorHex) textBgColorHex.textContent = e.target.value.toUpperCase();
+                    updateField('bgColor', e.target.value);
+                });
+            }
+
+            // 邊框設置
+            if (textStrokeEnable) textStrokeEnable.addEventListener('change', (e) => updateField('strokeEnable', e.target.checked));
+            if (textStrokeColorPicker) {
+                textStrokeColorPicker.addEventListener('input', (e) => {
+                    if (textStrokeColorHex) textStrokeColorHex.textContent = e.target.value.toUpperCase();
+                    updateField('strokeColor', e.target.value);
+                });
+            }
+            if (textStrokeWidthSlider) {
+                textStrokeWidthSlider.addEventListener('input', (e) => {
+                    if (textStrokeWidthLabel) textStrokeWidthLabel.textContent = `${e.target.value}px`;
+                    updateField('strokeWidth', parseInt(e.target.value));
+                });
+            }
+
+            if (textShowStart) {
+                textShowStart.addEventListener('change', (e) => {
+                    let val = Math.max(0, parseFloat(e.target.value) || 0);
+                    updateField('start', val);
+                });
+            }
+
+            if (textShowEnd) {
+                textShowEnd.addEventListener('change', (e) => {
+                    let val = Math.max(0, parseFloat(e.target.value) || 15);
+                    updateField('end', val);
+                });
+            }
+
+            if (applyPositionToAllBtn) {
+                applyPositionToAllBtn.addEventListener('click', () => {
+                    const currentSeg = textSegments.find(s => s.id === activeSegmentId);
+                    if (currentSeg && textSegments.length > 1) {
+                        const targetX = currentSeg.x;
+                        const targetY = currentSeg.y;
+                        
+                        textSegments.forEach(seg => {
+                            seg.x = targetX;
+                            seg.y = targetY;
+                        });
+                        
+                        redrawPreviewAndLabels();
+                        showBannerNotification(`已將所有字幕統一對齊至 X:${targetX}% Y:${targetY}%`, 'success');
+                    } else if (textSegments.length <= 1) {
+                        showBannerNotification('目前只有一段文字，不需執行對齊。', 'info');
+                    }
+                });
+            }
+        }
+
+        // 綁定動態新增與刪除字幕段落
+        if (addSegmentBtn) {
+            addSegmentBtn.addEventListener('click', () => {
+                const currentVideoTime = videoLoaded ? sourceVideo.currentTime : 0;
+                const duration = videoLoaded ? sourceVideo.duration : 15;
+
+                const newSeg = {
+                    id: 'seg_' + Date.now(),
+                    text: '這是一段新文字 ✍️',
+                    start: Math.round(currentVideoTime * 10) / 10,
+                    end: Math.min(Math.round((currentVideoTime + 4) * 10) / 10, duration),
+                    animIn: 'fade',
+                    animOut: 'fade',
+                    size: 28,
+                    boxWidth: 80,
+                    align: 'center',
+                    color: '#ffffff',
+                    bgEnable: false,
+                    bgColor: '#000000',
+                    strokeEnable: true,
+                    strokeColor: '#000000',
+                    strokeWidth: 4,
+                    x: 10,
+                    y: 30 + (textSegments.length * 8) % 45 // 略微交錯出現避免完全重疊
+                };
+
+                textSegments.push(newSeg);
+                activeSegmentId = newSeg.id;
+                renderSegmentsList();
+                syncActiveSegmentUI();
+                redrawPreviewAndLabels();
+                showBannerNotification('成功新增一段 Reels 字幕！', 'success');
+            });
+        }
+
+        if (deleteSegmentBtn) {
+            deleteSegmentBtn.addEventListener('click', () => {
+                if (textSegments.length <= 1) {
+                    showBannerNotification('請至少保留一段文字以作排版！', 'warning');
+                    return;
+                }
+
+                textSegments = textSegments.filter(s => s.id !== activeSegmentId);
+                // 重新選定最前段為 Focus
+                activeSegmentId = textSegments[0].id;
+                
+                renderSegmentsList();
+                syncActiveSegmentUI();
+                redrawPreviewAndLabels();
+                showBannerNotification('已刪除所選文字段落。', 'info');
+            });
+        }
+
+        function getAnimLabel(key) {
+            const map = {
+                'normal': '靜態',
+                'fade': '淡變',
+                'pop': '縮放',
+                'slide': '滑動',
+                'typewriter': '打字'
+            };
+            return map[key] || '靜態';
+        }
+
+        // 設置文字浮水印的編輯與滑鼠拖曳邏輯 (全面升級多圖層碰撞)
+        function setupTextOverlayHandlers() {
+            bindSegmentEditorEvents();
+
+            // 防禦性變更事件監聽 (確保 textOverlayEnable 存在才註冊)
+            if (textOverlayEnable) {
+                textOverlayEnable.addEventListener('change', () => redrawPreviewAndLabels());
+            }
+
+            // --- 點擊 Canvas 進行文字拖拉 (Drag and Drop) 邏輯 ---
+            function handleStart(clientX, clientY) {
+                // 防禦性判定：文字總開關關閉時不允許拖拉
+                if (!videoLoaded || (textOverlayEnable && !textOverlayEnable.checked)) return;
+
+                const rect = previewCanvas.getBoundingClientRect();
+                const scaleX = previewCanvas.width / rect.width;
+                const scaleY = previewCanvas.height / rect.height;
+
+                const clickX = (clientX - rect.left) * scaleX;
+                const clickY = (clientY - rect.top) * scaleY;
+
+                // 輪詢目前畫面上所有「可見段落」進行碰撞檢測選取 (Hit-test)
+                // 從最後畫上的段落開始（也就是疊在最上層的段落），提供最符合直覺的選取體驗
+                let hitId = null;
+
+                for (let i = textSegments.length - 1; i >= 0; i--) {
+                    const seg = textSegments[i];
+                    const box = textHitboxes[seg.id];
+
+                    if (box && clickX >= box.x && clickX <= (box.x + box.w) && clickY >= box.y && clickY <= (box.y + box.h)) {
+                        hitId = seg.id;
+                        break;
+                    }
+                }
+
+                if (hitId) {
+                    activeSegmentId = hitId;
+                    activeDragItem = textSegments.find(s => s.id === hitId);
+                    
+                    const box = textHitboxes[hitId];
+                    dragStartOffsetX = clickX - box.x;
+                    dragStartOffsetY = clickY - box.y;
+
+                    // 同步右側選單
+                    renderSegmentsList();
+                    syncActiveSegmentUI();
+                    redrawPreviewAndLabels();
+                }
+            }
+
+            function handleMove(clientX, clientY) {
+                if (!activeDragItem) return;
+
+                const rect = previewCanvas.getBoundingClientRect();
+                const scaleX = previewCanvas.width / rect.width;
+                const scaleY = previewCanvas.height / rect.height;
+
+                const curX = (clientX - rect.left) * scaleX;
+                const curY = (clientY - rect.top) * scaleY;
+
+                let newX = curX - dragStartOffsetX;
+                let newY = curY - dragStartOffsetY;
+
+                const xPercent = Math.max(0, Math.min(100, Math.round((newX / previewCanvas.width) * 100)));
+                const yPercent = Math.max(0, Math.min(100, Math.round((newY / previewCanvas.height) * 100)));
+
+                activeDragItem.x = xPercent;
+                activeDragItem.y = yPercent;
+
+                // 即時同步控制面板數值
+                if (textXLabel) textXLabel.textContent = `${xPercent}%`;
+                if (textYLabel) textYLabel.textContent = `${yPercent}%`;
+
+                redrawPreviewAndLabels();
+            }
+
+            function handleEnd() {
+                activeDragItem = null;
+            }
+
+            // 滑鼠監聽
+            previewCanvas.addEventListener('mousedown', (e) => handleStart(e.clientX, e.clientY));
+            window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+            window.addEventListener('mouseup', handleEnd);
+
+            // 觸控支持
+            previewCanvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 0) {
+                    handleStart(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            });
+            window.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) {
+                    handleMove(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            });
+            window.addEventListener('touchend', handleEnd);
+        }
+
+        // ==========================================
+        // 「設為當前秒數」快速捕捉連動邏輯
+        // ==========================================
+        function setupQuickCaptureButtons() {
+            // 字幕起點捕捉
+            if (capTextStartBtn) {
+                capTextStartBtn.addEventListener('click', () => {
+                    if (videoLoaded) {
+                        const roundedTime = Math.round(sourceVideo.currentTime * 10) / 10;
+                        if (textShowStart) textShowStart.value = roundedTime.toFixed(1);
+                        
+                        const seg = textSegments.find(s => s.id === activeSegmentId);
+                        if (seg) {
+                            seg.start = roundedTime;
+                            renderSegmentsList();
+                            redrawPreviewAndLabels();
+                            showBannerNotification(`段落起點對齊至: ${roundedTime.toFixed(1)}s`, 'success');
+                        }
+                    }
+                });
+            }
+
+            // 字幕終點捕捉
+            if (capTextEndBtn) {
+                capTextEndBtn.addEventListener('click', () => {
+                    if (videoLoaded) {
+                        const roundedTime = Math.round(sourceVideo.currentTime * 10) / 10;
+                        if (textShowEnd) textShowEnd.value = roundedTime.toFixed(1);
+
+                        const seg = textSegments.find(s => s.id === activeSegmentId);
+                        if (seg) {
+                            seg.end = roundedTime;
+                            renderSegmentsList();
+                            redrawPreviewAndLabels();
+                            showBannerNotification(`段落終點對齊至: ${roundedTime.toFixed(1)}s`, 'success');
+                        }
+                    }
+                });
+            }
+        }
+
+        // ==========================================
+        // 設置預覽介面與按鈕選擇
+        // ==========================================
+        function setupFilterSelection() {
+            filterCards.forEach(card => {
+                if(card.getAttribute('data-filter') === 'custom') return; // 客製 LUT 走上傳機制，不由點擊觸發
+
+                card.addEventListener('click', () => {
+                    filterCards.forEach(c => c.classList.remove('active', 'border-violet-500'));
+                    filterCards.forEach(c => c.classList.add('border-transparent'));
+                    
+                    card.classList.add('active', 'border-violet-500');
+                    card.classList.remove('border-transparent');
+                    
+                    selectedFilter = card.getAttribute('data-filter');
+                    redrawPreviewAndLabels();
+                });
+            });
+        }
+
+        // ==========================================
+        // 手機與 IG Reels UI 原生互動標籤（返回、按讚、留言）
+        // ==========================================
+        function setupIgUiOverlayHandlers() {
+            // 介面開啟/關閉切換
+            if (phoneUiToggle) {
+                phoneUiToggle.addEventListener('change', () => {
+                    if (phoneUiToggle.checked) {
+                        igUiOverlay.classList.remove('hidden');
+                        // 同步當前音樂名稱
+                        if (igMockMusicLabel) igMockMusicLabel.textContent = bgmAudio.src ? bgmNameText.textContent : "影片原聲 - sleek_creator";
+                        
+                        if (!sourceVideo.paused && mockAudioDisc) {
+                            mockAudioDisc.classList.add('spin-active');
+                        }
+                    } else {
+                        igUiOverlay.classList.add('hidden');
+                    }
+                });
+            }
+
+            // 返回 Chevron 按鈕點擊互動
+            if (mockBackBtn) {
+                mockBackBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showBannerNotification('模擬 Instagram Reels「返回」上一頁動作！', 'info');
+                    sourceVideo.pause();
+                    sourceVideo.currentTime = parseFloat(trimStartInput.value) || 0;
+                    if (bgmAudio.src) {
+                        bgmAudio.pause();
+                        bgmAudio.currentTime = 0;
+                    }
+                    updatePlayPauseIcon(false);
+                });
+            }
+
+            // 愛心按讚
+            if (mockHeartBtn) {
+                mockHeartBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    isLiked = !isLiked;
+                    if (isLiked) {
+                        if (mockHeartIcon) mockHeartIcon.classList.add('text-red-500');
+                        if (mockHeartIcon) mockHeartIcon.classList.remove('text-white');
+                        if (mockLikeCount) mockLikeCount.textContent = "82.4k";
+                        showBannerNotification('您按讚了此 Reel！❤️', 'success');
+                    } else {
+                        if (mockHeartIcon) mockHeartIcon.classList.add('text-white');
+                        if (mockHeartIcon) mockHeartIcon.classList.remove('text-red-500');
+                        if (mockLikeCount) mockLikeCount.textContent = "82.3k";
+                    }
+                });
+            }
+
+            // 留言按鈕點擊互動
+            if (mockCommentBtn) {
+                mockCommentBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    isCommented = !isCommented;
+                    if (isCommented) {
+                        if (mockCommentCount) mockCommentCount.textContent = "513";
+                        showBannerNotification('開啟 Reels 留言回覆視窗（模擬效果）💬', 'info');
+                    } else {
+                        if (mockCommentCount) mockCommentCount.textContent = "512";
+                    }
+                });
+            }
+        }
+
+        // ==========================================
+        // 影片下方整合剪輯軌道精確拖曳與播放指針控制邏輯
+        // ==========================================
+        function setupDraggableTimeline() {
+            // 處理時間點變更與輸入欄位連動
+            function updateTrimmingValues(start, end) {
+                if (trimStartInput) trimStartInput.value = start.toFixed(1);
+                if (trimEndInput) trimEndInput.value = end.toFixed(1);
+                
+                const clipLength = end - start;
+                if (clipDurationText) clipDurationText.textContent = `${clipLength.toFixed(1)}s`;
+                
+                // 更新高亮框的寬度定位
+                if (sourceVideo.duration && timelineHighlight) {
+                    const dur = sourceVideo.duration;
+                    const leftPer = (start / dur) * 100;
+                    const rightPer = 100 - ((end / dur) * 100);
+
+                    timelineHighlight.style.left = `${leftPer}%`;
+                    timelineHighlight.style.right = `${rightPer}%`;
+
+                    if (timelineLeftBlank) timelineLeftBlank.style.width = `${leftPer}%`;
+                    if (timelineRightBlank) timelineRightBlank.style.width = `${rightPer}%`;
+
+                    if (timelineStartHandle) timelineStartHandle.style.left = `${leftPer}%`;
+                    if (timelineEndHandle) timelineEndHandle.style.left = `${(end / dur) * 100}%`;
+
+                    // 更新下方起點與終點秒數標籤
+                    if (timelineStartLabel) timelineStartLabel.textContent = `起點: ${start.toFixed(1)}s`;
+                    if (timelineEndLabel) timelineEndLabel.textContent = `終點: ${end.toFixed(1)}s`;
+                }
+            }
+
+            // 當影片長度裁切改變時，確保背景音樂滑動視窗(長度)被強制同步更新
+            function enforceBgmWindow() {
+                if (!bgmAudio.src || !bgmAudio.duration || !videoLoaded) return;
+                const vStart = parseFloat(trimStartInput.value) || 0;
+                const vEnd = parseFloat(trimEndInput.value) || sourceVideo.duration;
+                const vDur = vEnd - vStart;
+                
+                const windowSize = Math.min(bgmAudio.duration, vDur);
+                let startVal = parseFloat(bgmTrimStart.value) || 0;
+                
+                // 確保結尾不超出音軌總長
+                if (startVal + windowSize > bgmAudio.duration) {
+                    startVal = Math.max(0, bgmAudio.duration - windowSize);
+                }
+                
+                // 觸發音效區段 UI 更新
+                if (bgmTrimStart) bgmTrimStart.value = startVal.toFixed(1);
+                if (bgmTrimEnd) bgmTrimEnd.value = (startVal + windowSize).toFixed(1);
+                
+                if (audioClipDurationText) audioClipDurationText.textContent = `${windowSize.toFixed(1)}s`;
+                
+                if (bgmAudio.duration && audioTimelineHighlight) {
+                    const dur = bgmAudio.duration;
+                    const leftPer = (startVal / dur) * 100;
+                    const rightPer = 100 - (((startVal + windowSize) / dur) * 100);
+
+                    audioTimelineHighlight.style.left = `${leftPer}%`;
+                    audioTimelineHighlight.style.right = `${rightPer}%`;
+
+                    if (audioTimelineLeftBlank) audioTimelineLeftBlank.style.width = `${leftPer}%`;
+                    if (audioTimelineRightBlank) audioTimelineRightBlank.style.width = `${rightPer}%`;
+
+                    if (audioTimelineStartHandle) audioTimelineStartHandle.style.left = `${leftPer}%`;
+                    if (audioTimelineEndHandle) audioTimelineEndHandle.style.left = `${((startVal + windowSize) / dur) * 100}%`;
+
+                    if (audioTimelineStartLabel) audioTimelineStartLabel.textContent = `起點: ${startVal.toFixed(1)}s`;
+                    if (audioTimelineEndLabel) audioTimelineEndLabel.textContent = `終點: ${(startVal + windowSize).toFixed(1)}s`;
+                }
+                syncBgmTime();
+            }
+
+            function handleTimelineInteraction(clientX) {
+                if (!videoLoaded || !sourceVideo.duration) return;
+
+                const rect = timelineContainer.getBoundingClientRect();
+                const offsetX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+                const targetTime = (offsetX / rect.width) * sourceVideo.duration;
+
+                let startVal = parseFloat(trimStartInput.value);
+                let endVal = parseFloat(trimEndInput.value);
+
+                if (activeHandle === 'start') {
+                    startVal = Math.min(targetTime, endVal - 0.5);
+                    startVal = Math.max(0, startVal);
+                    updateTrimmingValues(startVal, endVal);
+                    sourceVideo.currentTime = startVal;
+                    enforceBgmWindow();
+                } else if (activeHandle === 'end') {
+                    endVal = Math.max(targetTime, startVal + 0.5);
+                    endVal = Math.min(sourceVideo.duration, endVal);
+                    updateTrimmingValues(startVal, endVal);
+                    sourceVideo.currentTime = startVal;
+                    enforceBgmWindow();
+                } else if (activeHandle === 'scrub') {
+                    sourceVideo.currentTime = targetTime;
+                    
+                    const currentDisplayTime = Math.max(0, targetTime - startVal);
+                    const clipLength = endVal - startVal;
+                    if (currentTimeDisplay) currentTimeDisplay.textContent = formatTime(currentDisplayTime);
+                    if (durationDisplay) durationDisplay.textContent = formatTime(clipLength);
+                }
+            }
+
+            // 開始拖動把手事件
+            if (timelineStartHandle) {
+                timelineStartHandle.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    activeHandle = 'start';
+                    isDraggingTimeline = true;
+                });
+            }
+
+            if (timelineEndHandle) {
+                timelineEndHandle.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    activeHandle = 'end';
+                    isDraggingTimeline = true;
+                });
+            }
+
+            // 點擊軌道任何一處（包括指針調整）
+            if (timelineContainer) {
+                timelineContainer.addEventListener('mousedown', (e) => {
+                    const rect = timelineContainer.getBoundingClientRect();
+                    const offsetX = e.clientX - rect.left;
+                    const ratio = offsetX / rect.width;
+
+                    const startVal = parseFloat(trimStartInput.value);
+                    const endVal = parseFloat(trimEndInput.value);
+
+                    const startXDiff = Math.abs((startVal / sourceVideo.duration) - ratio);
+                    const endXDiff = Math.abs((endVal / sourceVideo.duration) - ratio);
+
+                    if (startXDiff < 0.05) {
+                        activeHandle = 'start';
+                    } else if (endXDiff < 0.05) {
+                        activeHandle = 'end';
+                    } else {
+                        activeHandle = 'scrub';
+                    }
+                    
+                    isDraggingTimeline = true;
+                    handleTimelineInteraction(e.clientX);
+                });
+            }
+
+            // 全域移動與放開事件偵聽
+            window.addEventListener('mousemove', (e) => {
+                if (isDraggingTimeline) {
+                    handleTimelineInteraction(e.clientX);
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDraggingTimeline = false;
+                activeHandle = null;
+            });
+
+            // --- 觸控支持 ---
+            if (timelineStartHandle) {
+                timelineStartHandle.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    activeHandle = 'start';
+                    isDraggingTimeline = true;
+                });
+            }
+
+            if (timelineEndHandle) {
+                timelineEndHandle.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    activeHandle = 'end';
+                    isDraggingTimeline = true;
+                });
+            }
+
+            if (timelineContainer) {
+                timelineContainer.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 0) return;
+                    const rect = timelineContainer.getBoundingClientRect();
+                    const offsetX = e.touches[0].clientX - rect.left;
+                    const ratio = offsetX / rect.width;
+
+                    const startVal = parseFloat(trimStartInput.value);
+                    const endVal = parseFloat(trimEndInput.value);
+
+                    const startXDiff = Math.abs((startVal / sourceVideo.duration) - ratio);
+                    const endXDiff = Math.abs((endVal / sourceVideo.duration) - ratio);
+
+                    if (startXDiff < 0.07) {
+                        activeHandle = 'start';
+                    } else if (endXDiff < 0.07) {
+                        activeHandle = 'end';
+                    } else {
+                        activeHandle = 'scrub';
+                    }
+                    isDraggingTimeline = true;
+                    handleTimelineInteraction(e.touches[0].clientX);
+                });
+            }
+
+            window.addEventListener('touchmove', (e) => {
+                if (isDraggingTimeline && e.touches.length > 0) {
+                    handleTimelineInteraction(e.touches[0].clientX);
+                }
+            });
+
+            window.addEventListener('touchend', () => {
+                isDraggingTimeline = false;
+                activeHandle = null;
+            });
+
+            // 輸入欄位手動修改的連動
+            if (trimStartInput) {
+                trimStartInput.addEventListener('change', () => {
+                    let start = Math.max(0, parseFloat(trimStartInput.value) || 0);
+                    let end = parseFloat(trimEndInput.value);
+                    if (start >= end - 0.5) {
+                        start = end - 0.5;
+                    }
+                    trimStartInput.value = start.toFixed(1);
+                    updateTrimmingValues(start, end);
+                    sourceVideo.currentTime = start;
+                    enforceBgmWindow();
+                });
+            }
+
+            if (trimEndInput) {
+                trimEndInput.addEventListener('change', () => {
+                    let start = parseFloat(trimStartInput.value);
+                    let end = Math.min(sourceVideo.duration, parseFloat(trimEndInput.value) || sourceVideo.duration);
+                    if (end <= start + 0.5) {
+                        end = start + 0.5;
+                    }
+                    trimEndInput.value = end.toFixed(1);
+                    updateTrimmingValues(start, end);
+                    sourceVideo.currentTime = start;
+                    enforceBgmWindow();
+                });
+            }
+
+            // 為了給載入時初次對齊呼叫的介面使用
+            window.enforceBgmWindow = enforceBgmWindow;
+        }
+
+        // 初始化或更新自訂時間軸
+        function updateVisualTimeline() {
+            if (!videoLoaded || !sourceVideo.duration) return;
+            const start = parseFloat(trimStartInput.value) || 0;
+            const end = parseFloat(trimEndInput.value) || sourceVideo.duration;
+
+            const dur = sourceVideo.duration;
+            const leftPer = (start / dur) * 100;
+            const rightPer = 100 - ((end / dur) * 100);
+
+            if (timelineHighlight) {
+                timelineHighlight.style.left = `${leftPer}%`;
+                timelineHighlight.style.right = `${rightPer}%`;
+            }
+
+            if (timelineLeftBlank) timelineLeftBlank.style.width = `${leftPer}%`;
+            if (timelineRightBlank) timelineRightBlank.style.width = `${rightPer}%`;
+
+            if (timelineStartHandle) timelineStartHandle.style.left = `${leftPer}%`;
+            if (timelineEndHandle) timelineEndHandle.style.left = `${(end / dur) * 100}%`;
+
+            if (timelineStartLabel) timelineStartLabel.textContent = `起點: ${start.toFixed(1)}s`;
+            if (timelineEndLabel) timelineEndLabel.textContent = `終點: ${end.toFixed(1)}s`;
+        }
+
+
+        // 設置背景音樂音量、原片靜音、本地下載與「音樂裁切智慧循環」
+        function setupAudioHandlers() {
+            // 原片音量控制與一鍵靜音
+            if (videoMuteBtn) {
+                videoMuteBtn.addEventListener('click', () => {
+                    isVideoMuted = !isVideoMuted;
+                    if (isVideoMuted) {
+                        prevVideoVol = videoVolume.value;
+                        videoVolume.value = 0;
+                        sourceVideo.muted = true;
+                        videoMuteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark text-red-500"></i>';
+                    } else {
+                        videoVolume.value = prevVideoVol == 0 ? 100 : prevVideoVol;
+                        sourceVideo.muted = false;
+                        videoMuteBtn.innerHTML = '<i class="fa-solid fa-volume-high text-gray-400"></i>';
+                    }
+                    if (videoVolumeLabel) videoVolumeLabel.textContent = `${videoVolume.value}%`;
+                    sourceVideo.volume = videoVolume.value / 100;
+                });
+            }
+
+            if (videoVolume) {
+                videoVolume.addEventListener('input', () => {
+                    if (videoVolume.value > 0 && isVideoMuted) {
+                        isVideoMuted = false;
+                        sourceVideo.muted = false;
+                        if (videoMuteBtn) videoMuteBtn.innerHTML = '<i class="fa-solid fa-volume-high text-gray-400"></i>';
+                    } else if (videoVolume.value == 0 && !isVideoMuted) {
+                        isVideoMuted = true;
+                        sourceVideo.muted = true;
+                        if (videoMuteBtn) videoMuteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark text-red-500"></i>';
+                    }
+                    const vol = videoVolume.value;
+                    if (videoVolumeLabel) videoVolumeLabel.textContent = `${vol}%`;
+                    sourceVideo.volume = vol / 100;
+                });
+            }
+
+            if (bgmVolume) {
+                bgmVolume.addEventListener('input', () => {
+                    const vol = bgmVolume.value;
+                    if (bgmVolumeLabel) bgmVolumeLabel.textContent = `${vol}%`;
+                    bgmAudio.volume = vol / 100;
+                });
+            }
+
+            // 音效區段剪裁工具 - 拖曳軸 UI 邏輯
+            function updateBgmTrimmingValues(start, end) {
+                if (bgmTrimStart) bgmTrimStart.value = start.toFixed(1);
+                if (bgmTrimEnd) bgmTrimEnd.value = end.toFixed(1);
+                
+                const clipDur = end - start;
+                if (audioClipDurationText) audioClipDurationText.textContent = `${clipDur.toFixed(1)}s`;
+                
+                if (bgmAudio.duration && audioTimelineHighlight) {
+                    const dur = bgmAudio.duration;
+                    const leftPer = (start / dur) * 100;
+                    const rightPer = 100 - ((end / dur) * 100);
+
+                    audioTimelineHighlight.style.left = `${leftPer}%`;
+                    audioTimelineHighlight.style.right = `${rightPer}%`;
+
+                    if (audioTimelineLeftBlank) audioTimelineLeftBlank.style.width = `${leftPer}%`;
+                    if (audioTimelineRightBlank) audioTimelineRightBlank.style.width = `${rightPer}%`;
+
+                    if (audioTimelineStartHandle) audioTimelineStartHandle.style.left = `${leftPer}%`;
+                    if (audioTimelineEndHandle) audioTimelineEndHandle.style.left = `${(end / dur) * 100}%`;
+
+                    if (audioTimelineStartLabel) audioTimelineStartLabel.textContent = `起點: ${start.toFixed(1)}s`;
+                    if (audioTimelineEndLabel) audioTimelineEndLabel.textContent = `終點: ${end.toFixed(1)}s`;
+                }
+                syncBgmTime();
+            }
+
+            // 修改音軌互動：維持固定視窗大小，無論拉哪裡都是平移整個視窗
+            function handleBgmTimelineInteraction(clientX) {
+                if (!bgmAudio.src || !bgmAudio.duration) return;
+
+                const rect = audioTimelineContainer.getBoundingClientRect();
+                const offsetX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+                const targetTime = (offsetX / rect.width) * bgmAudio.duration;
+
+                const vStart = parseFloat(trimStartInput.value) || 0;
+                const vEnd = parseFloat(trimEndInput.value) || sourceVideo.duration;
+                const vDur = vEnd - vStart;
+                const windowSize = Math.min(bgmAudio.duration, vDur);
+
+                let startVal = parseFloat(bgmTrimStart.value) || 0;
+
+                if (activeAudioHandle === 'start' || activeAudioHandle === 'end' || activeAudioHandle === 'middle') {
+                    if (activeAudioHandle === 'middle') {
+                        startVal = targetTime - windowSize / 2;
+                    } else if (activeAudioHandle === 'start') {
+                        startVal = targetTime;
+                    } else if (activeAudioHandle === 'end') {
+                        startVal = targetTime - windowSize;
+                    }
+
+                    // 防呆：不可超出邊界
+                    startVal = Math.max(0, Math.min(startVal, bgmAudio.duration - windowSize));
+                    updateBgmTrimmingValues(startVal, startVal + windowSize);
+                }
+            }
+
+            if (audioTimelineStartHandle) {
+                audioTimelineStartHandle.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    activeAudioHandle = 'start';
+                    isDraggingAudioTimeline = true;
+                });
+                audioTimelineStartHandle.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    activeAudioHandle = 'start';
+                    isDraggingAudioTimeline = true;
+                });
+            }
+
+            if (audioTimelineEndHandle) {
+                audioTimelineEndHandle.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    activeAudioHandle = 'end';
+                    isDraggingAudioTimeline = true;
+                });
+                audioTimelineEndHandle.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    activeAudioHandle = 'end';
+                    isDraggingAudioTimeline = true;
+                });
+            }
+
+            if (audioTimelineContainer) {
+                audioTimelineContainer.addEventListener('mousedown', (e) => {
+                    const rect = audioTimelineContainer.getBoundingClientRect();
+                    const offsetX = e.clientX - rect.left;
+                    const ratio = offsetX / rect.width;
+
+                    const startVal = parseFloat(bgmTrimStart.value) || 0;
+                    const endVal = parseFloat(bgmTrimEnd.value) || bgmAudio.duration;
+                    
+                    const startRatio = startVal / bgmAudio.duration;
+                    const endRatio = endVal / bgmAudio.duration;
+
+                    const startXDiff = Math.abs(startRatio - ratio);
+                    const endXDiff = Math.abs(endRatio - ratio);
+
+                    // 判斷點擊位置是視窗中間、靠近起點、還是靠近終點
+                    if (ratio > startRatio && ratio < endRatio) {
+                        activeAudioHandle = 'middle';
+                    } else if (startXDiff < endXDiff) {
+                        activeAudioHandle = 'start';
+                    } else {
+                        activeAudioHandle = 'end';
+                    }
+                    
+                    isDraggingAudioTimeline = true;
+                    handleBgmTimelineInteraction(e.clientX);
+                });
+
+                audioTimelineContainer.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 0) return;
+                    const rect = audioTimelineContainer.getBoundingClientRect();
+                    const offsetX = e.touches[0].clientX - rect.left;
+                    const ratio = offsetX / rect.width;
+
+                    const startVal = parseFloat(bgmTrimStart.value) || 0;
+                    const endVal = parseFloat(bgmTrimEnd.value) || bgmAudio.duration;
+                    
+                    const startRatio = startVal / bgmAudio.duration;
+                    const endRatio = endVal / bgmAudio.duration;
+
+                    const startXDiff = Math.abs(startRatio - ratio);
+                    const endXDiff = Math.abs(endRatio - ratio);
+
+                    if (ratio > startRatio && ratio < endRatio) {
+                        activeAudioHandle = 'middle';
+                    } else if (startXDiff < endXDiff) {
+                        activeAudioHandle = 'start';
+                    } else {
+                        activeAudioHandle = 'end';
+                    }
+                    
+                    isDraggingAudioTimeline = true;
+                    handleBgmTimelineInteraction(e.touches[0].clientX);
+                });
+            }
+
+            window.addEventListener('mousemove', (e) => {
+                if (isDraggingAudioTimeline) handleBgmTimelineInteraction(e.clientX);
+            });
+            window.addEventListener('mouseup', () => {
+                isDraggingAudioTimeline = false;
+                activeAudioHandle = null;
+            });
+            window.addEventListener('touchmove', (e) => {
+                if (isDraggingAudioTimeline && e.touches.length > 0) handleBgmTimelineInteraction(e.touches[0].clientX);
+            });
+            window.addEventListener('touchend', () => {
+                isDraggingAudioTimeline = false;
+                activeAudioHandle = null;
+            });
+
+            // 本地音訊上傳
+            if (audioUpload) {
+                audioUpload.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const fileURL = URL.createObjectURL(file);
+                    loadBGMAudio(fileURL, file.name);
+                });
+            }
+        }
+
+        // 載入音樂資源到播放組件
+        function loadBGMAudio(url, name) {
+            bgmAudio.src = url;
+            if (bgmNameText) bgmNameText.textContent = name;
+            if (audioWaveformContainer) audioWaveformContainer.classList.remove('hidden');
+
+            // 如果模擬面板啟用，同步更新音樂跑馬燈標題
+            if (phoneUiToggle && phoneUiToggle.checked && igMockMusicLabel) {
+                igMockMusicLabel.textContent = name;
+            }
+
+            bgmAudio.addEventListener('loadedmetadata', () => {
+                // 自動將音樂長度視窗同步至影片剪輯長度
+                if (window.enforceBgmWindow) {
+                    window.enforceBgmWindow();
+                } else {
+                    if (bgmTrimEnd) bgmTrimEnd.value = bgmAudio.duration.toFixed(1);
+                    if (bgmTrimStart) bgmTrimStart.value = "0.0";
+                }
+                
+                if (bgmTimeDisplay) bgmTimeDisplay.textContent = `00:00 / ${formatTime(bgmAudio.duration)}`;
+                bgmAudio.volume = bgmVolume.value / 100;
+                
+                if (!sourceVideo.paused) {
+                    syncBgmTime();
+                    bgmAudio.play();
+                }
+            });
+
+            // 背景樂播放時間更新 UI
+            bgmAudio.addEventListener('timeupdate', () => {
+                if (bgmTimeDisplay) bgmTimeDisplay.textContent = `${formatTime(bgmAudio.currentTime)} / ${formatTime(bgmAudio.duration)}`;
+            });
+        }
+        
+        // 背景音樂智慧同步時間軸與區段 Loop 演算法
+        function syncBgmTime() {
+            if (!bgmAudio.src || !videoLoaded) return;
+            
+            const vStart = parseFloat(trimStartInput.value) || 0;
+            const bStart = parseFloat(bgmTrimStart.value) || 0;
+            const bEnd = parseFloat(bgmTrimEnd.value) || bgmAudio.duration || 15;
+            
+            const bgmDur = bEnd - bStart;
+            let elapsed = sourceVideo.currentTime - vStart;
+            if (elapsed < 0) elapsed = 0;
+            
+            if (bgmDur > 0) {
+                // 如果音樂短於影片，自動將音樂在這個區間內無縫 Loop
+                elapsed = elapsed % bgmDur;
+            }
+            
+            const expectedTime = bStart + elapsed;
+            
+            // 避免微小誤差導致頻繁重設 currentTime 造成音訊破音
+            if (Math.abs(bgmAudio.currentTime - expectedTime) > 0.3) {
+                bgmAudio.currentTime = expectedTime;
+            }
+        }
+
+        // 格式化時間 (MM:SS)
+        function formatTime(seconds) {
+            if (seconds === null || isNaN(seconds)) return "00:00";
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // 簡易橫幅通知提示
+        function showBannerNotification(text, type = 'info') {
+            const existing = document.getElementById('notificationBanner');
+            if (existing) existing.remove();
+
+            const banner = document.createElement('div');
+            banner.id = 'notificationBanner';
+            banner.className = `fixed bottom-6 right-6 px-5 py-3 rounded-xl border shadow-xl z-50 text-xs font-semibold flex items-center gap-2.5 transition-all transform translate-y-0 animate-bounce`;
+            
+            let icon = '';
+            if (type === 'success') {
+                banner.className += ' bg-green-950 border-green-800 text-green-400';
+                icon = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+            } else if (type === 'warning' || type === 'error') {
+                banner.className += ' bg-red-950 border-red-900 text-red-400';
+                icon = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
+            } else {
+                banner.className += ' bg-blue-950 border-blue-900 text-blue-400';
+                icon = '<i class="fa-solid fa-circle-info text-blue-400"></i>';
+            }
+
+            banner.innerHTML = `${icon} <span>${text}</span>`;
+            document.body.appendChild(banner);
+
+            setTimeout(() => {
+                banner.remove();
+            }, 6000);
+        }
+
+        // 核心導出流程 (Canvas 動態影音錄製與混音導出)
+        function setupExportPipeline() {
+            if (exportBtn) exportBtn.addEventListener('click', startExport);
+            if (cancelExportBtn) cancelExportBtn.addEventListener('click', cancelExport);
+            if (editAgainBtn) {
+                editAgainBtn.addEventListener('click', () => {
+                    exportModal.classList.add('hidden');
+                });
+            }
+        }
+
+        // 開始錄製與導出 (整合動態 Compressor 限制器與自訂解析度)
+        async function startExport() {
+            if (!videoLoaded || isExporting) return;
+            isExporting = true;
+
+            exportModal.classList.remove('hidden');
+            renderingState.classList.remove('hidden');
+            completedState.classList.add('hidden');
+
+            sourceVideo.pause();
+            if (bgmAudio.src) bgmAudio.pause();
+            updatePlayPauseIcon(false);
+
+            const start = parseFloat(trimStartInput.value) || 0;
+            const end = parseFloat(trimEndInput.value) || sourceVideo.duration;
+            const duration = end - start;
+
+            // 建立使用者選定解析度的高規格 Reels Canvas
+            const resolutionWidth = exportResolution ? parseInt(exportResolution.value) : 1080;
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = resolutionWidth;
+            // 9:16 直式計算
+            exportCanvas.height = Math.round(resolutionWidth * (16 / 9)); 
+            const exportCtx = exportCanvas.getContext('2d');
+
+            // 混音與壓縮器 (Limiter)
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const dest = audioCtx.createMediaStreamDestination();
+            
+            // 設定廣播級動態防爆音限制器
+            let compressor = null;
+            if (audioLimiterEnable && audioLimiterEnable.checked) {
+                compressor = audioCtx.createDynamicsCompressor();
+                compressor.threshold.setValueAtTime(-3, audioCtx.currentTime); // Limit starts at -3dB
+                compressor.knee.setValueAtTime(0, audioCtx.currentTime);       // Hard knee
+                compressor.ratio.setValueAtTime(20, audioCtx.currentTime);     // Hard limiting
+                compressor.attack.setValueAtTime(0.005, audioCtx.currentTime);
+                compressor.release.setValueAtTime(0.05, audioCtx.currentTime);
+                compressor.connect(dest);
+            }
+
+            let videoAudioNode = null;
+            try {
+                videoAudioNode = audioCtx.createMediaElementSource(sourceVideo);
+                const videoGainNode = audioCtx.createGain();
+                videoGainNode.gain.value = videoVolume.value / 100;
+                videoAudioNode.connect(videoGainNode);
+                
+                if (compressor) {
+                    videoGainNode.connect(compressor);
+                } else {
+                    videoGainNode.connect(dest);
+                }
+            } catch (e) {
+                console.log("影片音源掛載略過 or 已在上一輪設定");
+            }
+
+            let bgmAudioNode = null;
+            let bgmGainNode = null;
+            if (bgmAudio.src) {
+                try {
+                    bgmAudioNode = audioCtx.createMediaElementSource(bgmAudio);
+                    bgmGainNode = audioCtx.createGain();
+                    bgmGainNode.gain.value = bgmVolume.value / 100;
+                    bgmAudioNode.connect(bgmGainNode);
+                    
+                    if (compressor) {
+                        bgmGainNode.connect(compressor);
+                    } else {
+                        bgmGainNode.connect(dest);
+                    }
+                } catch (e) {
+                    console.log("背景音源掛載略過 or 已在上一輪設定");
+                }
+            }
+
+            const videoStream = exportCanvas.captureStream(30); 
+            const outputStream = new MediaStream();
+
+            videoStream.getVideoTracks().forEach(track => outputStream.addTrack(track));
+            dest.stream.getAudioTracks().forEach(track => outputStream.addTrack(track));
+
+            let options = { mimeType: 'video/webm;codecs=vp9,opus' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/webm;codecs=vp8,opus' };
+            }
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/webm' };
+            }
+
+            let chunks = [];
+            const mediaRecorder = new MediaRecorder(outputStream, options);
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    chunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const videoURL = URL.createObjectURL(blob);
+                
+                downloadLink.href = videoURL;
+                downloadLink.download = `SleekReels_${Math.floor(Date.now()/1000)}.webm`;
+
+                renderingState.classList.add('hidden');
+                completedState.classList.remove('hidden');
+                
+                audioCtx.close();
+                isExporting = false;
+            };
+
+            mediaRecorder.start();
+            sourceVideo.currentTime = start;
+            if (bgmAudio.src) {
+                syncBgmTime();
+            }
+
+            sourceVideo.play();
+            if (bgmAudio.src) bgmAudio.play();
+
+            // 錄製影格渲染
+            function renderStep() {
+                if (!isExporting) {
+                    mediaRecorder.stop();
+                    sourceVideo.pause();
+                    if (bgmAudio.src) bgmAudio.pause();
+                    return;
+                }
+
+                const current = sourceVideo.currentTime;
+                const elapsed = current - start;
+
+                // 匯出時也要同步更新音軌位置，實現自訂 Loop
+                if (bgmAudio.src) syncBgmTime();
+
+                // 繪製包含多段浮水印、調色、Center-crop的影格 (導出時 updateHitbox 為 false)
+                drawVideoWithLUT(exportCanvas, exportCtx, sourceVideo, selectedFilter, false);
+
+                const progress = Math.min(100, (elapsed / duration) * 100);
+                updateExportProgress(progress, elapsed, duration);
+
+                if (current >= end || sourceVideo.ended) {
+                    isExporting = false;
+                    mediaRecorder.stop();
+                    sourceVideo.pause();
+                    if (bgmAudio.src) bgmAudio.pause();
+                } else {
+                    requestAnimationFrame(renderStep);
+                }
+            }
+
+            requestAnimationFrame(renderStep);
+        }
+
+        // 更新導出進度條
+        function updateExportProgress(percent, elapsed, total) {
+            const strokeDashOffset = 301.6 - (301.6 * percent / 100);
+            if (progressCircle) progressCircle.style.strokeDashoffset = strokeDashOffset;
+            if (progressText) progressText.textContent = `${Math.floor(percent)}%`;
+            if (renderingTimeText) renderingTimeText.textContent = `${Math.max(0, elapsed).toFixed(1)}s / ${total.toFixed(1)}s`;
+        }
+
+        // 取消錄製
+        function cancelExport() {
+            isExporting = false;
+            if (exportModal) exportModal.classList.add('hidden');
+            sourceVideo.pause();
+            if (bgmAudio.src) bgmAudio.pause();
+            updatePlayPauseIcon(false);
+            
+            sourceVideo.currentTime = parseFloat(trimStartInput.value) || 0;
+            startCanvasRenderLoop();
+        }
+    </script>
+</body>
+</html>
