@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SleekReels Pro - 專業網頁版 IG Reels 編輯器</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body class="text-gray-100 min-h-screen flex flex-col">
 
+    <!-- 頂部導覽列 -->
     <header class="border-b border-gray-800/80 bg-gray-950/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div class="flex items-center gap-3">
             <div class="bg-gradient-to-tr from-pink-500 via-red-500 to-yellow-500 p-2 rounded-xl shadow-lg">
@@ -17,133 +22,837 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-400 bg-clip-text text-transparent">SleekReels Pro</h1>
-                <p class="text-xs text-gray-500">網頁專業版 · 直式 9:16 Reels 創作器</p>
+                <p class="text-xs text-gray-500">純前端免後台 · 直式 9:16 Reels 影音創作器</p>
             </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-xs bg-green-500/10 text-green-400 px-3 py-1.5 rounded-full border border-green-500/20 font-medium flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> 瀏覽器本地硬體加速
+            </span>
         </div>
     </header>
 
-    <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
-        <div class="lg:col-span-5 xl:col-span-4 flex flex-col items-center gap-4">
-            <div class="w-full max-w-[340px] md:max-w-[370px] bg-black p-3.5 rounded-[48px] border-4 border-gray-800 relative ring-1 ring-gray-900 flex flex-col items-center">
-                <div id="reelsContainer" class="w-full reels-ratio bg-gray-950 rounded-[32px] overflow-hidden border border-white/5 relative group no-select">
-                    <div id="videoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-gray-950">
-                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-pink-500 mb-2"></i>
-                        <h3 class="font-semibold text-sm">開始製作您的 Reel</h3>
-                        <label class="mt-4 bg-gradient-to-r from-pink-500 to-violet-600 px-4 py-2 rounded-full text-xs font-bold cursor-pointer">
-                            選擇影片檔案 <input type="file" id="videoUpload" accept="video/*" class="hidden">
-                        </label>
-                    </div>
-                    <canvas id="previewCanvas" class="w-full h-full object-cover hidden rounded-[32px]"></canvas>
-                    <video id="sourceVideo" class="hidden" loop playsinline muted></video>
-                    <div id="videoLoadingSpinner" class="absolute inset-0 bg-gray-950/80 hidden flex-col items-center justify-center gap-2"><div class="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div></div>
-                    
-                    <div id="igUiOverlay" class="absolute inset-0 pointer-events-none flex flex-col justify-between pt-4 hidden">
-                        <div class="flex justify-between px-4 text-xs drop-shadow"><div class="pointer-events-auto cursor-pointer" id="mockBackBtn"><i class="fa-solid fa-chevron-left"></i> 返回</div><span class="font-bold">Reels</span><i class="fa-solid fa-camera"></i></div>
-                        <div class="w-full bg-gradient-to-t from-black via-black/30 to-transparent p-4 flex flex-col pt-10">
-                            <div class="flex items-end justify-between">
-                                <div class="space-y-2 text-xs"><div class="flex items-center gap-2"><span class="font-bold">sleek_creator</span></div><p id="igMockCaption" class="line-clamp-2 text-gray-200">我的 Reels!</p></div>
-                                <div class="flex flex-col items-center gap-3 text-white pointer-events-auto cursor-pointer" id="mockHeartBtn"><i class="fa-solid fa-heart text-lg" id="mockHeartIcon"></i><span class="text-[10px]" id="mockLikeCount">82.3k</span></div>
-                            </div>
-                            <div class="w-full h-[1.5px] bg-white/25 mt-2 relative"><div id="igMockProgressBar" class="absolute left-0 bg-white h-full w-0"></div></div>
-                        </div>
-                    </div>
+    <!-- 主要工作區 -->
+    <main class="editor-shell flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+        
+        <!-- 左側：影片即時預覽 (Reels 9:16) 與底部整合時間軸剪輯軌 -->
+        <div class="preview-column lg:col-span-5 xl:col-span-4 flex flex-col items-center justify-start gap-4">
+
+            <!-- 預覽上方小型來源工具列 -->
+            <div id="previewSourceToolbar" class="w-full max-w-[340px] md:max-w-[370px] bg-gray-950/85 border border-gray-800 rounded-xl px-3 py-2 flex items-center gap-2 text-[10px] text-gray-400 shadow-lg">
+                <button id="changeVideoBtn" class="hidden h-8 px-2.5 rounded-md bg-gray-800 hover:bg-gray-750 text-white font-semibold border border-gray-700 shadow-sm flex items-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span>更換</span>
+                </button>
+                <button id="rotateVideoBtn" class="h-8 w-8 rounded-md bg-gray-800 hover:bg-gray-750 text-white border border-gray-700 shrink-0" title="旋轉影片">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <label class="h-8 px-2 rounded-md bg-gray-900 border border-gray-800 flex items-center gap-1.5 shrink-0 cursor-pointer" title="顯示模擬 Reels 介面">
+                    <i class="fa-solid fa-mobile-screen-button text-pink-400"></i>
+                    <input type="checkbox" id="phoneUiToggle" class="sr-only peer">
+                    <span class="w-7 h-3.5 bg-gray-700 rounded-full relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-2.5 after:h-2.5 after:bg-gray-300 after:rounded-full after:transition-all peer-checked:bg-pink-500 peer-checked:after:translate-x-3.5"></span>
+                </label>
+                <div class="min-w-0 flex-1 text-right">
+                    <div id="videoInfoLabel" class="truncate">尚未載入影片</div>
+                    <div id="totalTimeText" class="truncate text-gray-600">影片總長: 0.0s</div>
                 </div>
             </div>
             
-            <div id="integratedController" class="w-full max-w-[340px] md:max-w-[370px] bg-gray-900 border border-gray-800 rounded-2xl p-4 space-y-3 hidden">
-                <div class="flex justify-between text-xs font-mono"><button id="playPauseBtn" class="text-white"><i class="fa-solid fa-play"></i></button><div><span id="currentTimeDisplay" class="text-pink-400">00:00</span> / <span id="durationDisplay">00:00</span></div><span id="clipDurationText" class="text-pink-400">15.0s</span></div>
-                <div id="timelineContainer" class="relative h-8 bg-gray-950 rounded-xl border border-gray-800/60">
-                    <div id="timelineLeftBlank" class="absolute left-0 bg-black/70 h-full"></div>
-                    <div id="timelineHighlight" class="absolute border-y-2 border-pink-500 bg-pink-500/10 h-full"></div>
-                    <div id="timelineRightBlank" class="absolute right-0 bg-black/77 h-full"></div>
-                    <div id="timelinePlayhead" class="absolute w-[2px] bg-yellow-400 h-full"><div class="w-2 h-2 bg-yellow-400 rounded-full -ml-1"></div></div>
-                    <div id="timelineStartHandle" class="absolute w-3 bg-pink-500 h-full rounded-l cursor-ew-resize"></div>
-                    <div id="timelineEndHandle" class="absolute w-3 bg-pink-500 h-full rounded-r cursor-ew-resize"></div>
+            <!-- 📱 極致手機外框預覽容器 -->
+            <div id="phonePreviewFrame" class="w-full max-w-[340px] md:max-w-[370px] bg-black p-3.5 rounded-[48px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] border-4 border-gray-800 relative ring-1 ring-gray-900 flex flex-col items-center justify-center">
+                
+                <!-- 手機頂部動態島 -->
+                <div class="absolute top-2 w-28 h-6 bg-black rounded-full z-40 flex items-center justify-between px-3 select-none pointer-events-none">
+                    <div class="w-2.5 h-2.5 rounded-full bg-gray-900"></div>
+                    <div class="w-10 h-1 bg-gray-900 rounded-full"></div>
+                    <div class="w-2 h-2 rounded-full bg-blue-900/40"></div>
+                </div>
+
+                <!-- 手機頂部系統狀態列 -->
+                <div class="w-full px-5 pt-1 pb-1.5 flex justify-between items-center text-[11px] font-semibold text-white/90 select-none pointer-events-none z-30">
+                    <span class="font-mono">9:41</span>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-signal text-[9px]"></i>
+                        <i class="fa-solid fa-wifi text-[9px]"></i>
+                        <i class="fa-solid fa-battery-three-quarters text-xs text-white"></i>
+                    </div>
+                </div>
+
+                <!-- 手機左下音樂上傳 -->
+                <label id="phoneAudioUploadBtn" class="absolute -right-11 sm:-right-16 bottom-8 z-50 w-10 h-10 rounded-lg border border-white/15 bg-gray-950/85 hover:bg-teal-500/20 hover:border-teal-300 text-teal-200 shadow-lg backdrop-blur flex items-center justify-center cursor-pointer transition active:scale-95" title="上傳音樂">
+                    <i class="fa-solid fa-music text-sm"></i>
+                    <input type="file" id="audioUpload" accept="audio/*" class="hidden">
+                </label>
+
+                <!-- 手機右側文字與 LUT 工具軌 -->
+                <div id="phoneToolRail" class="absolute -right-11 sm:-right-16 top-24 bottom-24 z-50 flex w-12 flex-col items-center gap-3">
+                    <div id="phoneTextSegmentDock" class="phone-tool-scroll min-h-0 flex-1 w-full flex flex-col items-center gap-1.5 overflow-y-auto overflow-x-visible px-1">
+                        <!-- JS 動態生成 -->
+                    </div>
+                    <div class="w-8 border-t border-white/15"></div>
+                    <div id="phoneLutDock" class="phone-tool-scroll max-h-[42%] w-full shrink-0 flex flex-col items-center gap-1.5 overflow-y-auto overflow-x-visible px-1">
+                        <!-- JS 動態生成 -->
+                    </div>
+                </div>
+
+                <!-- Reels 9:16 影片核心視窗 -->
+                <div id="reelsContainer" class="w-full reels-ratio bg-gray-950 rounded-[32px] overflow-hidden border border-white/5 relative group flex items-center justify-center cursor-default no-select">
+                    
+                    <!-- 未上傳影片時的 Placeholder -->
+                    <div id="videoPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center z-10 bg-gray-950 rounded-[32px]">
+                        <div class="w-16 h-16 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center mb-4 text-gray-500 group-hover:scale-110 transition-transform duration-300">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-pink-500"></i>
+                        </div>
+                        <h3 class="font-semibold text-base text-gray-200">開始製作您的 Reel</h3>
+                        <p class="text-xs text-gray-500 mt-2 max-w-[200px] leading-relaxed">點擊右側上傳原始影片，或直接拖曳至此處</p>
+                        <label class="mt-6 bg-gradient-to-r from-pink-500 to-violet-600 hover:from-pink-600 hover:to-violet-700 text-white text-xs font-semibold px-5 py-2.5 rounded-full shadow-lg cursor-pointer transition-all">
+                            選擇影片檔案
+                            <input type="file" id="videoUpload" accept="video/*" class="hidden">
+                        </label>
+                    </div>
+
+                    <!-- 實際運作的 Canvas 畫布 (套用 LUT 與多段文字後的高速預覽) -->
+                    <canvas id="previewCanvas" class="w-full h-full object-cover hidden cursor-grab active:cursor-grabbing rounded-[32px] bg-black touch-none"></canvas>
+
+                    <!-- 用來隱藏讀取的原始 Video 標籤 -->
+                    <video id="sourceVideo" class="hidden" loop playsinline muted></video>
+
+                    <!-- 影片載入中遮罩 -->
+                    <div id="videoLoadingSpinner" class="absolute inset-0 bg-gray-950/80 backdrop-blur-sm z-20 hidden flex-col items-center justify-center gap-3 rounded-[32px]">
+                        <div class="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span class="text-sm text-gray-300 font-medium">讀取影片媒體中...</span>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- 📱 模擬原生手機 IG Reels 介面疊加層 (Instagram UI) -->
+                    <!-- ========================================== -->
+                    <div id="igUiOverlay" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between pt-4 pb-0 hidden no-select">
+                        
+                        <!-- 頂部列：返回 Chevron 按鈕與 Reels 標題 -->
+                        <div class="flex items-center justify-between text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] px-4">
+                            <div class="flex items-center gap-2 cursor-pointer pointer-events-auto hover:text-pink-400 transition-colors" id="mockBackBtn">
+                                <i class="fa-solid fa-chevron-left text-base"></i>
+                                <span class="text-xs font-bold font-sans">返回</span>
+                            </div>
+                            <span class="font-bold text-base tracking-wide">Reels</span>
+                            <i class="fa-solid fa-camera text-lg cursor-pointer pointer-events-auto hover:opacity-80"></i>
+                        </div>
+
+                        <!-- 底部貼文資訊、原生影片進度條 與 導航欄 整合包 -->
+                        <div class="w-full flex flex-col bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-8 shrink-0">
+                            
+                            <!-- 底部貼文與右側按鈕整合層 -->
+                            <div class="flex items-end justify-between gap-3 px-4 pb-3">
+                                
+                                <!-- 左下側貼文資訊 -->
+                                <div class="flex-1 text-white flex flex-col gap-2.5 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)] pb-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 p-[1.5px] shadow">
+                                            <div class="w-full h-full rounded-full bg-gray-900 flex items-center justify-center text-[10px] font-bold text-pink-400">SR</div>
+                                        </div>
+                                        <span class="text-xs font-bold font-sans">sleek_creator</span>
+                                        <button class="bg-transparent border border-white/40 text-[10px] font-semibold px-2 py-0.5 rounded-md hover:bg-white/10 transition-colors">關注</button>
+                                    </div>
+                                    
+                                    <!-- 智慧同步最前段可見之文字內容 -->
+                                    <p id="igMockCaption" class="text-xs leading-relaxed line-clamp-2 max-w-[210px] text-gray-100 font-medium">
+                                        我的第一支 Reels!
+                                    </p>
+
+                                    <!-- 滾動音樂名稱 -->
+                                    <div class="flex items-center gap-1.5 bg-black/25 backdrop-blur-sm px-2 py-1 rounded-full w-fit max-w-[160px] overflow-hidden text-[10px]">
+                                        <i class="fa-solid fa-music text-[9px] shrink-0"></i>
+                                        <div class="overflow-hidden relative w-28 whitespace-nowrap">
+                                            <span id="igMockMusicLabel" class="inline-block marquee-active font-medium font-sans">影片原聲 - sleek_creator</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 右下側互動按鈕直行 (原生 IG 互動標籤) -->
+                                <div class="flex flex-col items-center gap-4 text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]">
+                                    <!-- 愛心按讚 -->
+                                    <div class="flex flex-col items-center cursor-pointer pointer-events-auto group/heart" id="mockHeartBtn">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center transition-transform active:scale-90">
+                                            <i class="fa-solid fa-heart text-xl transition-colors duration-200" id="mockHeartIcon"></i>
+                                        </div>
+                                        <span class="text-[10px] font-semibold mt-0.5 animate-pulse" id="mockLikeCount">82.3k</span>
+                                    </div>
+
+                                    <!-- 留言標籤 -->
+                                    <div class="flex flex-col items-center cursor-pointer pointer-events-auto group/comment" id="mockCommentBtn">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center transition-transform active:scale-90">
+                                            <i class="fa-solid fa-comment text-xl"></i>
+                                        </div>
+                                        <span class="text-[10px] font-semibold mt-0.5" id="mockCommentCount">512</span>
+                                    </div>
+
+                                    <!-- 分享 -->
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center">
+                                            <i class="fa-solid fa-paper-plane text-lg"></i>
+                                        </div>
+                                        <span class="text-[10px] font-semibold mt-0.5">分享</span>
+                                    </div>
+
+                                    <!-- 收藏 -->
+                                    <div class="flex flex-col items-center">
+                                        <div class="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center">
+                                            <i class="fa-solid fa-bookmark text-lg"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- 黑膠碟旋轉 -->
+                                    <div class="w-7 h-7 rounded-full border border-white/35 p-[1px] bg-black/80 flex items-center justify-center shrink-0">
+                                        <div id="mockAudioDisc" class="w-full h-full rounded-full bg-gray-900 border border-black flex items-center justify-center overflow-hidden">
+                                            <div class="w-2 h-2 rounded-full bg-gray-400 border border-black z-10"></div>
+                                            <div class="absolute inset-0 bg-gradient-to-tr from-purple-800 to-pink-500 opacity-60"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 1:1 影片原生細微播放進度條 (白色進度滑動線) -->
+                            <div class="w-full h-[1.5px] bg-white/20 relative">
+                                <div id="igMockProgressBar" class="absolute left-0 top-0 bottom-0 bg-white/80 w-0"></div>
+                            </div>
+
+                            <!-- 1:1 手機內原生 IG 底部導航欄 -->
+                            <div class="w-full bg-black/95 border-t border-white/5 py-3 px-6 flex items-center justify-between text-white/90 pointer-events-auto shrink-0 select-none z-30">
+                                <button class="hover:text-white transition-colors text-lg"><i class="fa-solid fa-house"></i></button>
+                                <button class="hover:text-white transition-colors text-lg"><i class="fa-solid fa-magnifying-glass"></i></button>
+                                <button class="text-pink-500 hover:text-pink-400 transition-colors text-xl"><i class="fa-solid fa-clapperboard"></i></button>
+                                <button class="hover:text-white transition-colors text-lg"><i class="fa-solid fa-bag-shopping"></i></button>
+                                <div class="w-6 h-6 rounded-full border border-white/40 overflow-hidden flex items-center justify-center shrink-0">
+                                    <div class="w-full h-full bg-gray-850 flex items-center justify-center text-[8px] font-bold text-pink-400">SR</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 手機內字幕編輯底部抽屜 -->
+                    <div id="mobileTextEditorBackdrop" class="absolute inset-0 z-40 bg-black/35 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+                    <div id="mobileTextEditorSheet" class="absolute inset-x-2 bottom-2 z-50 translate-y-[115%] transition-transform duration-300 ease-out rounded-[26px] border border-white/10 bg-gray-950/95 shadow-2xl backdrop-blur-xl p-3 text-white pointer-events-auto max-h-[48%] overflow-y-auto">
+                        <div class="mx-auto mb-2 h-1 w-12 rounded-full bg-white/25"></div>
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <div class="min-w-0">
+                                <div class="text-[10px] uppercase tracking-[0.2em] text-amber-300/80">Text block</div>
+                                <div id="mobileTextEditorTitle" class="text-sm font-bold text-white truncate">文字 1</div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button id="mobileDuplicateSegmentBtn" type="button" class="w-8 h-8 rounded-md bg-white/10 hover:bg-white/15 active:scale-95 transition" title="複製此段">
+                                    <i class="fa-solid fa-copy text-[12px]"></i>
+                                </button>
+                                <button id="mobileDeleteSegmentBtn" type="button" class="w-8 h-8 rounded-md bg-red-500/15 text-red-300 hover:bg-red-500/25 active:scale-95 transition" title="刪除此段">
+                                    <i class="fa-solid fa-trash-can text-[12px]"></i>
+                                </button>
+                                <button id="closeMobileTextEditorBtn" type="button" class="w-8 h-8 rounded-md bg-white/10 hover:bg-white/15 active:scale-95 transition" title="關閉">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-[10px] text-gray-400 mb-1">文字內容</label>
+                                <textarea id="mobileTextOverlayContent" rows="3" class="w-full rounded-2xl border border-white/10 bg-black/45 px-3 py-2 text-[13px] leading-relaxed text-white outline-none focus:border-amber-400 resize-none" placeholder="輸入字幕文字..."></textarea>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="block">
+                                    <span class="block text-[10px] text-gray-400 mb-1">開始秒數</span>
+                                    <input type="number" id="mobileTextShowStart" min="0" step="0.1" class="w-full rounded-xl border border-white/10 bg-black/45 px-2.5 py-2 text-xs text-white outline-none focus:border-amber-400">
+                                </label>
+                                <label class="block">
+                                    <span class="block text-[10px] text-gray-400 mb-1">結束秒數</span>
+                                    <input type="number" id="mobileTextShowEnd" min="0" step="0.1" class="w-full rounded-xl border border-white/10 bg-black/45 px-2.5 py-2 text-xs text-white outline-none focus:border-amber-400">
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="block">
+                                    <span class="flex justify-between text-[10px] text-gray-400 mb-1"><span>字級</span><span id="mobileTextSizeLabel" class="text-amber-300">28px</span></span>
+                                    <input type="range" id="mobileTextSizeSlider" min="14" max="64" value="28" class="w-full accent-amber-400">
+                                </label>
+                                <label class="block">
+                                    <span class="flex justify-between text-[10px] text-gray-400 mb-1"><span>寬度</span><span id="mobileTextWidthLabel" class="text-amber-300">80%</span></span>
+                                    <input type="range" id="mobileTextWidthSlider" min="20" max="100" value="80" class="w-full accent-amber-400">
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+                                <div id="mobileTextAlignGroup" class="grid grid-cols-4 gap-1 rounded-lg border border-white/10 bg-black/35 p-1">
+                                    <button type="button" data-align="left" class="mobile-align-btn h-8 rounded-md text-gray-400"><i class="fa-solid fa-align-left"></i></button>
+                                    <button type="button" data-align="center" class="mobile-align-btn h-8 rounded-md text-gray-400"><i class="fa-solid fa-align-center"></i></button>
+                                    <button type="button" data-align="right" class="mobile-align-btn h-8 rounded-md text-gray-400"><i class="fa-solid fa-align-right"></i></button>
+                                    <button type="button" data-align="justify" class="mobile-align-btn h-8 rounded-md text-gray-400"><i class="fa-solid fa-align-justify"></i></button>
+                                </div>
+                                <label class="flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-black/35" title="文字顏色">
+                                    <input type="color" id="mobileTextColorPicker" value="#ffffff" class="h-6 w-6 cursor-pointer rounded-sm border-0 bg-transparent">
+                                </label>
+                                <label class="flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-black/35" title="背景色">
+                                    <input type="color" id="mobileTextBgColorPicker" value="#000000" class="h-6 w-6 cursor-pointer rounded-sm border-0 bg-transparent">
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-200">
+                                <label class="flex items-center justify-between rounded-md border border-white/10 bg-black/35 px-3 py-2">
+                                    <span>黑底</span>
+                                    <input type="checkbox" id="mobileTextBgEnable" class="accent-amber-400">
+                                </label>
+                                <label class="flex items-center justify-between rounded-md border border-white/10 bg-black/35 px-3 py-2">
+                                    <span>邊框</span>
+                                    <input type="checkbox" id="mobileTextStrokeEnable" class="accent-amber-400">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 手機下方 iOS Home Indicator 橫條 -->
+                <div class="w-full flex justify-center pt-2 pb-1 select-none pointer-events-none">
+                    <div class="w-32 h-1 bg-white/40 rounded-full"></div>
                 </div>
             </div>
+
+            <!-- 整合式底部時間軸剪輯與播放控制台 -->
+            <div id="mobileControllerSlot" class="w-full flex justify-center">
+            <div id="integratedController" class="w-full max-w-[340px] md:max-w-[370px] bg-gray-900/90 border border-gray-800/80 rounded-2xl p-4 shadow-xl space-y-3.5 no-select hidden">
+                
+                <!-- 播放控制項 -->
+                <div class="flex items-center justify-between">
+                    <button id="playPauseBtn" class="text-white hover:text-pink-500 transition-colors w-9 h-9 flex items-center justify-center bg-gray-950 border border-gray-800 rounded-full shrink-0">
+                        <i class="fa-solid fa-play text-xs"></i>
+                    </button>
+                    <div class="text-xs font-mono text-gray-400 flex items-center gap-1.5 bg-gray-950/50 px-3 py-1.5 rounded-lg border border-gray-850">
+                        <span id="currentTimeDisplay" class="text-pink-400 font-bold">00:00</span>
+                        <span class="text-gray-600">/</span>
+                        <span id="durationDisplay">00:00</span>
+                    </div>
+                    <span id="clipDurationText" class="text-[11px] text-pink-400 font-bold bg-pink-500/10 px-2.5 py-1 rounded-full border border-pink-500/10">
+                        15.0s
+                    </span>
+                </div>
+                
+                <!-- 精準雙把手剪輯時間軸軌道 -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="rounded-xl border border-gray-800 bg-gray-950/70 p-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] text-gray-500 font-semibold">影片起點</span>
+                            <div class="flex items-center gap-1">
+                                <button id="trimStartMinusBtn" type="button" class="w-6 h-6 rounded-md bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-[10px]" title="起點往前"><i class="fa-solid fa-minus"></i></button>
+                                <button id="trimStartPlusBtn" type="button" class="w-6 h-6 rounded-md bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-[10px]" title="起點往後"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <input type="number" id="trimStart" value="0.0" min="0" step="0.1" inputmode="decimal" class="min-w-0 w-full h-8 rounded-lg bg-black/50 border border-gray-800 px-2 text-right text-xs text-white font-mono focus:border-pink-400 focus:outline-none">
+                            <span class="text-[10px] text-gray-500">s</span>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-gray-800 bg-gray-950/70 p-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] text-gray-500 font-semibold">影片終點</span>
+                            <div class="flex items-center gap-1">
+                                <button id="trimEndMinusBtn" type="button" class="w-6 h-6 rounded-md bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-[10px]" title="終點往前"><i class="fa-solid fa-minus"></i></button>
+                                <button id="trimEndPlusBtn" type="button" class="w-6 h-6 rounded-md bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-[10px]" title="終點往後"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <input type="number" id="trimEnd" value="15.0" min="0.1" step="0.1" inputmode="decimal" class="min-w-0 w-full h-8 rounded-lg bg-black/50 border border-gray-800 px-2 text-right text-xs text-white font-mono focus:border-pink-400 focus:outline-none">
+                            <span class="text-[10px] text-gray-500">s</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="timelineContainer" class="relative h-11 bg-gray-950 rounded-xl overflow-visible cursor-pointer border border-gray-800/60 no-select">
+                    <!-- 剪輯未選取區（左側暗色） -->
+                    <div id="timelineLeftBlank" class="absolute left-0 top-0 bottom-0 bg-black/75 pointer-events-none rounded-l-xl" style="width: 0%;"></div>
+                    
+                    <!-- 剪輯選取發光區 -->
+                    <div id="timelineHighlight" class="absolute top-0 bottom-0 bg-pink-500/10 border-y-2 border-pink-500/80 pointer-events-none" style="left: 0%; right: 0%;"></div>
+                    
+                    <!-- 剪輯未選取區（右側暗色） -->
+                    <div id="timelineRightBlank" class="absolute right-0 top-0 bottom-0 bg-black/75 pointer-events-none rounded-r-xl" style="width: 0%;"></div>
+
+                    <!-- 播放指針 -->
+                    <div id="timelinePlayhead" class="absolute top-0 bottom-0 w-[3px] bg-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.8)] z-10 pointer-events-none" style="left: 0%;">
+                        <div class="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-gray-950"></div>
+                    </div>
+
+                    <!-- 開始端拖拉把手 -->
+                    <div id="timelineStartHandle" class="absolute top-0 bottom-0 w-4.5 bg-gradient-to-r from-pink-500 to-pink-600 rounded-l-lg cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 0%;">
+                        <div class="flex flex-col gap-0.5 items-center">
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                        </div>
+                    </div>
+
+                    <!-- 結束端拖拉把手 -->
+                    <div id="timelineEndHandle" class="absolute top-0 bottom-0 w-4.5 bg-gradient-to-l from-pink-500 to-pink-600 rounded-r-lg cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 100%; transform: translateX(-100%);">
+                        <div class="flex flex-col gap-0.5 items-center">
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                            <span class="w-[1.5px] h-2.5 bg-white/70 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 刻度標籤與操作指南 -->
+                <div class="flex justify-between text-[10px] text-gray-500 font-medium">
+                    <span id="timelineStartLabel">影片起點: 0.0s</span>
+                    <span class="text-gray-600 text-center font-semibold">拖曳把手調長度，拖粉色區域整段移動</span>
+                    <span id="timelineEndLabel">影片終點: 15.0s</span>
+                </div>
+                <div id="audioWaveformContainer" class="hidden border-t border-gray-800/80 pt-3 space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="min-w-0 flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-teal-500/15 text-teal-300 flex items-center justify-center shrink-0"><i class="fa-solid fa-music text-[11px]"></i></span>
+                            <span class="min-w-0 truncate text-[11px] text-teal-200 font-semibold" id="bgmNameText">尚未載入音樂</span>
+                        </div>
+                        <span id="bgmTimeDisplay" class="shrink-0 text-[10px] font-mono text-gray-500">00:00 / 00:00</span>
+                    </div>
+                    <audio id="bgmAudio" class="hidden" loop crossorigin="anonymous"></audio>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="rounded-lg border border-gray-800 bg-gray-950/70 px-2 py-1.5">
+                            <label class="flex items-center justify-between text-[10px] text-gray-400 mb-1">原聲 <span id="videoVolumeLabel">100%</span></label>
+                            <div class="flex items-center gap-2">
+                                <button id="videoMuteBtn" type="button" class="w-6 h-6 rounded-md bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 flex items-center justify-center"><i class="fa-solid fa-volume-high text-[10px]"></i></button>
+                                <input type="range" id="videoVolume" min="0" max="100" value="100" class="min-w-0 w-full accent-pink-500 bg-gray-800 h-1 rounded-lg appearance-none">
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-gray-800 bg-gray-950/70 px-2 py-1.5">
+                            <label class="flex items-center justify-between text-[10px] text-gray-400 mb-1">音樂 <span id="bgmVolumeLabel">80%</span></label>
+                            <input type="range" id="bgmVolume" min="0" max="100" value="80" class="w-full accent-teal-400 bg-gray-800 h-1 rounded-lg appearance-none mt-2.5">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-[10px] text-gray-500 mb-1 select-none">
+                            <span id="audioTimelineStartLabel">起點: 0.0s</span>
+                            <span class="text-teal-300 font-semibold">音樂長度 <span id="audioClipDurationText">0.0s</span></span>
+                            <span id="audioTimelineEndLabel">終點: 0.0s</span>
+                        </div>
+                        <div id="audioTimelineContainer" class="relative h-7 bg-gray-950 rounded-lg overflow-visible cursor-pointer border border-gray-800/60 no-select">
+                            <div id="audioTimelineLeftBlank" class="absolute left-0 top-0 bottom-0 bg-black/80 pointer-events-none rounded-l-lg" style="width: 0%;"></div>
+                            <div id="audioTimelineHighlight" class="absolute top-0 bottom-0 bg-teal-500/20 border-y-2 border-teal-500/80 pointer-events-none" style="left: 0%; right: 100%;"></div>
+                            <div id="audioTimelineRightBlank" class="absolute right-0 top-0 bottom-0 bg-black/80 pointer-events-none rounded-r-lg" style="width: 0%;"></div>
+                            <div id="audioTimelineStartHandle" class="absolute top-0 bottom-0 w-4 bg-gradient-to-r from-teal-500 to-teal-600 rounded-l cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 0%;">
+                                <span class="w-[1.5px] h-2.5 bg-white/80 rounded-full"></span>
+                            </div>
+                            <div id="audioTimelineEndHandle" class="absolute top-0 bottom-0 w-4 bg-gradient-to-l from-teal-500 to-teal-600 rounded-r cursor-ew-resize flex items-center justify-center shadow-lg hover:brightness-110 active:scale-y-105 transition-transform z-20" style="left: 100%; transform: translateX(-100%);">
+                                <span class="w-[1.5px] h-2.5 bg-white/80 rounded-full"></span>
+                            </div>
+                        </div>
+                        <div class="hidden">
+                            <input type="number" id="bgmTrimStart" value="0.0">
+                            <input type="number" id="bgmTrimEnd" value="15.0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- 本地預覽說明 -->
+            <p class="text-[11px] text-gray-500 text-center max-w-[340px]">
+                <i class="fa-solid fa-circle-info text-pink-500 mr-1"></i> 字幕卡片均可直接在預覽畫面上**手指/滑鼠直接拖曳**移動排版！
+            </p>
         </div>
 
-        <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-120px)] pr-1">
-            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex justify-between items-center">
-                <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="phoneUiToggle"> 模擬原生手機 IG UI</label>
-                <button id="rotateVideoBtn" class="bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fa-solid fa-rotate-right"></i> 影片旋轉 90°</button>
-            </div>
-
-            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 space-y-4">
-                <div class="flex justify-between items-center pb-2 border-b border-gray-800">
-                    <h3 class="text-sm font-bold flex items-center gap-1.5 text-amber-400"><i class="fa-solid fa-language"></i> 字幕多段管理器</h3>
-                    <div class="flex gap-3"><label class="text-xs flex items-center gap-1"><input type="checkbox" id="textOverlayEnable" checked>啟用</label><button id="addSegmentBtn" class="bg-amber-600 text-xs font-bold px-3 py-1 rounded-lg">新增字幕段落</button></div>
+        <!-- 右側：編輯控制台 -->
+        <div class="controls-column lg:col-span-7 xl:col-span-8 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-120px)] pr-1">
+            
+            <!-- 隱藏數值保留連動 -->
+            <!-- 隱藏字幕管理器：保留原控制節點供手機內編輯器同步使用 -->
+            <div class="hidden">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-800/60 flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">2</span>
+                        <h2 class="font-semibold text-base text-gray-100">字幕軌道多段管理器 (Subtitles Manager)</h2>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="relative inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="textOverlayEnable" class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            <span class="ml-2 text-xs text-gray-300 font-medium">啟用字幕</span>
+                        </label>
+                        <button id="addSegmentBtn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 shrink-0">
+                            <i class="fa-solid fa-plus text-[10px]"></i> 新增下一段文字
+                        </button>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div id="textSegmentsList" class="md:col-span-5 space-y-2 max-h-[220px] overflow-y-auto"></div>
-                    <div id="segmentEditor" class="md:col-span-7 bg-gray-950 border border-gray-800 p-3 rounded-xl space-y-3">
-                        <div class="flex justify-between text-xs"><button id="duplicateSegmentBtn" class="text-amber-500"><i class="fa-solid fa-copy"></i> 複製此段</button><button id="deleteSegmentBtn" class="text-red-500"><i class="fa-solid fa-trash"></i> 刪除此段</button></div>
-                        <textarea id="textOverlayContent" rows="2" class="w-full bg-gray-900 border border-gray-800 rounded p-2 text-xs text-white" placeholder="輸入文字..."></textarea>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div>出現時間 <input type="number" id="textShowStart" step="0.1" class="w-full bg-gray-900 p-1 rounded text-center"></div>
-                            <div>消失時間 <input type="number" id="textShowEnd" step="0.1" class="w-full bg-gray-900 p-1 rounded text-center"></div>
+
+                <!-- 智慧分段字幕軌清單列表 -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    
+                    <!-- 左半：分段字幕列表 -->
+                    <div class="lg:col-span-5 space-y-2">
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5">字幕段落列表</label>
+                        <label class="relative inline-flex items-center cursor-pointer select-none shrink-0 mb-2" title="&#26032;&#22686;&#26178;&#25509;&#22312;&#26368;&#24460;&#19968;&#27573;&#24460;&#38754;">
+                            <input type="checkbox" id="continuousSegmentToggle" class="sr-only peer" checked>
+                            <div class="w-8 h-4 bg-gray-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500"></div>
+                            <span class="ml-1.5 text-[10px] text-gray-400 font-medium">&#25509;&#32396;</span>
+                        </label>
+                        <div id="textSegmentsList" class="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                            <!-- JS 動態生成 -->
                         </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div>字級大小 <input type="range" id="textSizeSlider" min="14" max="64" value="28" class="w-full accent-amber-500"></div>
-                            <div>窗格寬度(%) <input type="range" id="textWidthSlider" min="20" max="100" value="80" class="w-full accent-amber-500"></div>
+                    </div>
+
+                    <!-- 右半：當前所選文字段落的屬性與樣式編輯器 -->
+                    <div id="segmentEditor" class="lg:col-span-7 bg-gray-950 p-4 rounded-xl border border-gray-850/80 space-y-4">
+                        <div class="flex justify-between items-center pb-2 border-b border-gray-900">
+                            <span class="text-xs font-bold text-amber-400 flex items-center gap-1">
+                                <i class="fa-solid fa-pen-to-square"></i> 段落樣式與時間微調
+                            </span>
+                            <div class="flex items-center gap-3">
+                                <!-- 複製字幕段落 -->
+                                <button id="duplicateSegmentBtn" class="text-amber-500 hover:text-amber-400 text-xs flex items-center gap-1" title="複製此段字幕與外觀樣式">
+                                    <i class="fa-solid fa-copy"></i> 複製此段
+                                </button>
+                                <button id="deleteSegmentBtn" class="text-red-500 hover:text-red-400 text-xs flex items-center gap-1" title="刪除選定文字段落">
+                                    <i class="fa-solid fa-trash-can"></i> 刪除此段
+                                </button>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div>進場動畫 <select id="textAnimInSelect" class="w-full bg-gray-900 p-1 rounded"><option value="normal">靜態</option><option value="fade">淡入</option><option value="pop">縮放</option><option value="slide">滑現</option><option value="typewriter">打字機</option></select></div>
-                            <div>出場動畫 <select id="textAnimOutSelect" class="w-full bg-gray-900 p-1 rounded"><option value="normal">靜態</option><option value="fade">淡出</option><option value="pop">縮小</option><option value="slide">滑隱</option></select></div>
+
+                        <!-- 內容輸入 -->
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-1">文字段落內容</label>
+                            <textarea id="textOverlayContent" rows="2" placeholder="輸入字幕文字內容，可使用 Enter 換行..." class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"></textarea>
                         </div>
-                        <div class="flex gap-2 bg-gray-900 p-2 rounded text-xs items-center justify-between">
-                            <label class="flex items-center gap-1"><input type="checkbox" id="textStrokeEnable" checked> 文字邊框</label>
-                            <input type="range" id="textStrokeWidthSlider" min="1" max="12" value="4" class="accent-amber-500 w-24">
-                            <button id="applyPositionToAllBtn" class="bg-gray-800 text-[10px] px-2 py-1 rounded">對齊所有座標</button>
+
+                        <!-- 出現與消失時間設定 (相對時間) -->
+                        <div class="grid grid-cols-2 gap-3 bg-gray-900/40 p-2.5 rounded-lg border border-gray-900">
+                            <div>
+                                <label class="block text-[10px] text-gray-500 mb-1">出現時間 (秒)</label>
+                                <div class="flex gap-1">
+                                    <input type="number" id="textShowStart" value="0.0" min="0" step="0.1" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white">
+                                    <button id="capTextStartBtn" class="bg-gray-800 hover:bg-gray-750 px-1.5 rounded text-[9px] shrink-0" title="將目前播放點設為起點">捕捉</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-gray-500 mb-1">消失時間 (秒)</label>
+                                <div class="flex gap-1">
+                                    <input type="number" id="textShowEnd" value="15.0" min="0" step="0.1" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs text-white">
+                                    <button id="capTextEndBtn" class="bg-gray-800 hover:bg-gray-750 px-1.5 rounded text-[9px] shrink-0" title="將目前播放點設為終點">捕捉</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 尺寸與窗格寬度 -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] text-gray-500 mb-1">字型大小 (px)</label>
+                                <input type="range" id="textSizeSlider" min="14" max="64" value="28" class="w-full accent-amber-500 bg-gray-900 h-1 rounded-lg appearance-none mt-2.5">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-500 mb-1">字幕窗格寬度 (%) <span id="textWidthLabel" class="text-amber-500">80%</span></label>
+                                <input type="range" id="textWidthSlider" min="20" max="100" value="80" class="w-full accent-amber-500 bg-gray-900 h-1 rounded-lg appearance-none mt-2.5">
+                            </div>
+                        </div>
+
+                        <!-- 動畫與排版對齊 -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[11px] text-gray-500 mb-1">進場動畫</label>
+                                    <select id="textAnimInSelect" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-amber-500">
+                                        <option value="normal">無 (靜態)</option>
+                                        <option value="fade">漸變淡入</option>
+                                        <option value="pop">彈性縮放</option>
+                                        <option value="slide">滑動漸現</option>
+                                        <option value="typewriter">打字機</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-gray-500 mb-1">出場動畫</label>
+                                    <select id="textAnimOutSelect" class="w-full bg-gray-900 border border-gray-800 rounded px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-amber-500">
+                                        <option value="normal">無 (靜態)</option>
+                                        <option value="fade">漸變淡出</option>
+                                        <option value="pop">縮放消失</option>
+                                        <option value="slide">滑動隱藏</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-500 mb-1">對齊排版</label>
+                                <div class="flex gap-1 bg-gray-900 p-1 rounded-lg border border-gray-800" id="textAlignGroup">
+                                    <button type="button" data-align="left" class="flex-1 py-1 text-xs rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors align-btn"><i class="fa-solid fa-align-left"></i></button>
+                                    <button type="button" data-align="center" class="flex-1 py-1 text-xs rounded bg-gray-800 text-white transition-colors align-btn"><i class="fa-solid fa-align-center"></i></button>
+                                    <button type="button" data-align="right" class="flex-1 py-1 text-xs rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors align-btn"><i class="fa-solid fa-align-right"></i></button>
+                                    <button type="button" data-align="justify" class="flex-1 py-1 text-xs rounded text-gray-400 hover:text-white hover:bg-gray-800 transition-colors align-btn" title="分散對齊 (限多行)"><i class="fa-solid fa-align-justify"></i></button>
+                                </div>
+                                <button id="applyTextAlignToAllBtn" type="button" class="mt-2 w-full bg-gray-800 hover:bg-gray-750 text-gray-300 px-2 py-1.5 rounded-md transition-colors flex items-center justify-center gap-1 text-[10px]">
+                                    <i class="fa-solid fa-layer-group"></i> 套用到全部字幕
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 顏色、邊框與背景 -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-900/40 p-3 rounded-lg border border-gray-900">
+                            <!-- 內部左半：主色與背景 -->
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-[11px] text-gray-500">文字顏色</label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-gray-400 font-mono" id="textColorHex">#FFFFFF</span>
+                                        <input type="color" id="textColorPicker" value="#ffffff" class="w-6 h-6 rounded border border-gray-800 bg-transparent cursor-pointer shrink-0">
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <label class="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer">
+                                        <input type="checkbox" id="textBgEnable" class="rounded bg-gray-900 border-gray-800 text-amber-500">
+                                        啟用黑底
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-gray-400 font-mono" id="textBgColorHex">#000000</span>
+                                        <input type="color" id="textBgColorPicker" value="#000000" class="w-6 h-6 rounded border border-gray-800 bg-transparent cursor-pointer shrink-0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 內部右半：邊框粗細與顏色 -->
+                            <div class="space-y-3 pl-0 sm:pl-4 sm:border-l border-gray-800">
+                                <div class="flex items-center justify-between">
+                                    <label class="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer">
+                                        <input type="checkbox" id="textStrokeEnable" class="rounded bg-gray-900 border-gray-800 text-amber-500">
+                                        文字邊框
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-gray-400 font-mono" id="textStrokeColorHex">#000000</span>
+                                        <input type="color" id="textStrokeColorPicker" value="#000000" class="w-6 h-6 rounded border border-gray-800 bg-transparent cursor-pointer shrink-0">
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+                                        <span>邊框粗細</span>
+                                        <span id="textStrokeWidthLabel">4px</span>
+                                    </div>
+                                    <input type="range" id="textStrokeWidthSlider" min="1" max="15" value="4" class="w-full accent-amber-500 bg-gray-900 h-1 rounded-lg appearance-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 排版位置與統一點擊套用 -->
+                        <div class="bg-gray-900/40 p-2.5 rounded-lg border border-gray-900 mt-2">
+                            <div class="flex justify-between items-center text-[10px] text-gray-500 mb-1.5">
+                                <span>當前排版位置 X: <span id="textXLabel" class="text-amber-500 font-bold">10%</span>, Y: <span id="textYLabel" class="text-amber-500 font-bold">15%</span></span>
+                                <button id="applyPositionToAllBtn" class="bg-gray-800 hover:bg-gray-750 text-gray-300 px-2 py-1.5 rounded-md transition-colors flex items-center gap-1">
+                                    <i class="fa-solid fa-align-left"></i> 對齊所有段落
+                                </button>
+                            </div>
+                            <p class="text-[9.5px] text-gray-600 leading-normal">提示：用滑鼠在左側畫面拖拉定位。點擊「對齊所有段落」可將所有文字鎖定至此座標。</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 space-y-3">
-                <h3 class="text-sm font-bold text-violet-400"><i class="fa-solid fa-palette"></i> 電影級調色濾鏡</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="filterContainer">
-                    <label id="lutUploadLabel" class="border-2 border-dashed border-gray-700 hover:border-violet-500 p-2 rounded-xl text-center flex flex-col justify-center items-center cursor-pointer text-xs"><i class="fa-solid fa-file-code text-xl mb-1 text-gray-500"></i>匯入 .cube</label>
-                    <button class="filter-card active bg-gray-950 p-2 rounded-xl text-xs text-left border-2 border-violet-500" data-filter="normal"><b class="block">原始 Raw</b>無效果</button>
-                    <button class="filter-card bg-gray-950 p-2 rounded-xl text-xs text-left border-2 border-transparent" data-filter="cinematic"><b class="block text-cyan-400">電影 Teal</b>冷青高光</button>
-                    <button class="filter-card bg-gray-950 p-2 rounded-xl text-xs text-left border-2 border-transparent" data-filter="sunset"><b class="block text-orange-400">暖陽 Warm</b>夕陽溫暖</button>
+            <!-- 第三步：套用專業 LUT 色調濾鏡 (支援自訂 .cube) -->
+            <div class="hidden">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 flex items-center justify-center text-xs font-bold">3</span>
+                    <h2 class="font-semibold text-base text-gray-100">套用調色濾鏡 (3D LUT Presets)</h2>
                 </div>
+
+                <!-- 濾鏡卡片網格 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="filterContainer">
+                    
+                    <!-- 載入自訂 LUT -->
+
+
+                    <!-- 原始效果 -->
+                    <button class="filter-card active group bg-gray-950 hover:bg-gray-900 border-2 border-violet-500 p-3 rounded-xl text-left transition-all duration-200" data-filter="normal">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-gray-300">無濾鏡</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">原始效果 (Raw)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">保留原片色溫色調</span>
+                    </button>
+
+                    <!-- 電影質感 (Orange & Teal) -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="cinematic">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-cyan-900 to-amber-800 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-amber-200">Teal & Orange</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">電影 (Teal)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">暖橘高光與冷青陰影</span>
+                    </button>
+
+                    <!-- 暖陽微風 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="sunset">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-amber-700 to-red-800 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-orange-200">Warm Breeze</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">黃昏 (Warm)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">金黃色調，溫暖治癒</span>
+                    </button>
+
+                    <!-- 賽博霓虹 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="cyber">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-purple-900 via-pink-950 to-blue-950 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-pink-300">Neon City</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">賽博龐克</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">高飽和紫粉與未來感藍</span>
+                    </button>
+
+                    <!-- 復古黑白 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="noir">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-gray-900 via-gray-700 to-gray-500 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-white">Classic Noir</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">黑白 (Noir)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">高對比復古底片感</span>
+                    </button>
+
+                    <!-- 寂靜森林 -->
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="forest">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-emerald-950 via-teal-900 to-gray-900 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-emerald-300">Forest Fog</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">冷綠 (Forest)</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">低飽和墨綠與神秘感</span>
+                    </button>
+
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="clean709">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-neutral-800 via-sky-900 to-stone-700 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-sky-100">Clean 709</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">Clean 709</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">Natural contrast</span>
+                    </button>
+
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="film_soft">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-zinc-800 via-rose-900 to-yellow-800 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-rose-100">Soft Film</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">Soft Film</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">Gentle rolloff</span>
+                    </button>
+
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="vivid_pop">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-cyan-800 via-fuchsia-800 to-amber-600 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-fuchsia-100">Vivid Pop</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">Vivid Pop</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">Bright social look</span>
+                    </button>
+
+                    <button class="filter-card group bg-gray-950 hover:bg-gray-900 border-2 border-transparent p-3 rounded-xl text-left transition-all duration-200" data-filter="cool_matte">
+                        <div class="w-full aspect-[4/3] bg-gradient-to-br from-slate-900 via-cyan-950 to-stone-600 rounded-lg mb-2 overflow-hidden relative">
+                            <span class="absolute bottom-1.5 left-1.5 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-cyan-100">Cool Matte</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-200 block group-hover:text-violet-400 transition-colors">Cool Matte</span>
+                        <span class="text-[10px] text-gray-500 mt-0.5 block">Muted cool tone</span>
+                    </button>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-3"><i class="fa-solid fa-circle-info text-violet-400 mr-1"></i> Built-in color presets only.</p>
             </div>
 
-            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 space-y-3">
-                <h3 class="text-sm font-bold text-teal-400"><i class="fa-solid fa-music"></i> 背景音樂配樂 (智慧固定滑窗)</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label class="bg-gray-950 p-3 rounded-xl border border-gray-800 text-center cursor-pointer text-xs flex flex-col justify-center items-center"><i class="fa-solid fa-upload text-xl mb-1 text-teal-400"></i>瀏覽本機音檔<input type="file" id="audioUpload" accept="audio/*" class="hidden"></label>
-                    <div class="bg-gray-950 p-2 rounded-xl border border-gray-800 space-y-1 text-xs"><button class="builtin-track w-full text-left bg-gray-900 p-1.5 rounded" data-url="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">🎵 內建輕快 Demo 音軌 01</button></div>
-                </div>
-                <div id="audioWaveformContainer" class="bg-gray-950 border border-gray-850 p-3 rounded-xl space-y-2 hidden">
-                    <div class="flex justify-between text-xs"><span id="bgmNameText" class="text-teal-400 truncate max-w-[200px]">音樂</span><span id="bgmTimeDisplay" class="font-mono text-gray-500">00:00</span></div>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="flex items-center gap-1"><button id="videoMuteBtn"><i class="fa-solid fa-volume-high"></i></button><input type="range" id="videoVolume" class="w-full accent-pink-500" value="100"></div>
-                        <div class="flex items-center gap-1"><i class="fa-solid fa-music text-teal-400"></i><input type="range" id="bgmVolume" class="w-full accent-teal-400" value="80"></div>
+            <!-- 第四步：背景音樂音軌與剪裁 -->
+            <!-- 5. 極速渲染與導出 -->
+            <div id="desktopControllerSlot" class="hidden lg:flex w-full justify-center"></div>
+            <div id="exportPanel" class="w-full max-w-[340px] md:max-w-[370px] mx-auto bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 border border-pink-500/30 rounded-2xl p-4 text-center shadow-xl">
+                <div class="flex flex-col items-stretch justify-between gap-4 mb-4">
+                    <div class="text-center">
+                        <h3 class="text-base font-bold text-gray-100 mb-1">準備好您的 Reels 影片了嗎？</h3>
+                        <p class="text-[11px] text-gray-400">在瀏覽器中即時混音、套用調色與字幕，直接進行高保真度錄製。</p>
                     </div>
                     
-                    <div class="text-[10px] text-gray-400 flex justify-between select-none mt-2"><span id="audioTimelineStartLabel">0.0s</span><span class="text-teal-400 font-bold">視窗長度已與影片剪輯同步 (<span id="audioClipDurationText">0s</span>)</span><span id="audioTimelineEndLabel">0.0s</span></div>
-                    <div id="audioTimelineContainer" class="relative h-6 bg-gray-900 rounded-lg cursor-pointer border border-gray-800">
-                        <div id="audioTimelineLeftBlank" class="absolute left-0 bg-black/80 h-full rounded-l-lg"></div>
-                        <div id="audioTimelineHighlight" class="absolute border-y-2 border-teal-500 bg-teal-500/20 h-full"></div>
-                        <div id="audioTimelineRightBlank" class="absolute right-0 bg-black/80 h-full rounded-r-lg"></div>
-                        <div id="audioTimelineStartHandle" class="absolute w-3 bg-teal-500 h-full rounded-l"></div>
-                        <div id="audioTimelineEndHandle" class="absolute w-3 bg-teal-500 h-full rounded-r"></div>
+                    <!-- 導出畫質解析度選擇 -->
+                    <div class="shrink-0 text-center grid grid-cols-3 gap-2">
+                        <div class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 shadow-sm">
+                            <span class="block text-[10px] text-gray-500 mb-0.5">來源解析度</span>
+                            <span id="sourceResolutionLabel" class="text-xs text-white font-semibold">讀取中</span>
+                        </div>
+                        <div class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 shadow-sm">
+                            <span class="block text-[10px] text-gray-500 mb-0.5">來源幀率</span>
+                            <span id="sourceFpsLabel" class="text-xs text-white font-semibold">跟隨原影片</span>
+                        </div>
+                        <div class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 shadow-sm">
+                            <span class="block text-[10px] text-gray-500 mb-0.5">來源碼率</span>
+                            <span id="sourceBitrateLabel" class="text-xs text-white font-semibold">讀取中</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="bg-gradient-to-r from-gray-950 via-gray-900 border border-pink-500/30 rounded-2xl p-4 flex flex-col items-center gap-3">
-                <div class="flex justify-between w-full items-center text-xs"><span>輸出畫質：<select id="exportResolution" class="bg-gray-950 border border-gray-700 px-2 py-1 rounded text-white"><option value="720">720p (720x1280)</option><option value="1080" selected>1080p (1080x1920)</option><option value="1440">2K (1440x2560)</option></select></span><label class="flex items-center gap-1"><input type="checkbox" id="audioLimiterEnable" checked> 啟用廣播級防爆音限制器 (-3dB Limiter)</label></div>
-                <button id="exportBtn" disabled class="w-full bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-white font-bold py-3 rounded-full shadow text-xs"><i class="fa-solid fa-circle-play mr-1"></i> <span id="exportBtnText">請先上傳影片以啟用匯出</span></button>
+                
+                <div class="flex items-center justify-center gap-2 mb-3 bg-gray-950 border border-gray-800 py-2 px-3 rounded-lg w-fit mx-auto">
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" id="smoothExportMode" class="sr-only peer" checked>
+                        <div class="w-8 h-4 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content=[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-pink-500"></div>
+                        <span class="ml-2 text-[11px] text-gray-300 font-medium"><i class="fa-solid fa-gauge-high text-pink-400 mr-1"></i> 流暢優先</span>
+                    </label>
+                </div>
+                <div class="flex items-center justify-center gap-2 mb-4 bg-gray-950 border border-gray-800 py-2 px-3 rounded-lg w-fit mx-auto">
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" id="audioLimiterEnable" class="sr-only peer" checked>
+                        <div class="w-8 h-4 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-teal-500"></div>
+                        <span class="ml-2 text-[11px] text-gray-300 font-medium"><i class="fa-solid fa-wave-square text-teal-400 mr-1"></i> 啟用防爆音限制器 (Dynamic Limiter)</span>
+                    </label>
+                </div>
+                
+                <button id="exportBtn" disabled class="w-full bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 disabled:from-gray-800 disabled:to-gray-800 disabled:text-gray-500 text-white font-bold px-10 py-3.5 rounded-full shadow-lg transition-all transform hover:scale-[1.01] disabled:scale-100 disabled:cursor-not-allowed text-sm inline-flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-circle-play"></i> 
+                    <span id="exportBtnText">請先上傳影片以啟用匯出</span>
+                </button>
             </div>
         </div>
     </main>
 
-    <div id="exportModal" class="fixed inset-0 bg-black/90 backdrop-blur z-50 flex items-center justify-center hidden p-4"><div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-md w-full text-center relative"><button id="cancelExportBtn" class="absolute top-4 right-4 text-gray-500"><i class="fa-solid fa-xmark"></i></button><div id="renderingState"><div class="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><h3 class="text-sm font-bold">正在高級即時合成錄製影片...</h3><p id="progressText" class="text-xs text-pink-500 font-mono mt-1">0%</p><span id="renderingTimeText" class="text-[10px] text-gray-500 font-mono block mt-2">0.0s / 0.0s</span></div><div id="completedState" class="hidden space-y-4"><i class="fa-solid fa-circle-check text-green-500 text-3xl animate-bounce"></i><h3 class="text-sm font-bold">🎉 Reels 影片封裝錄製成功！</h3><a id="downloadLink" class="bg-gradient-to-r from-pink-500 to-yellow-500 text-white px-6 py-2 rounded-xl text-xs font-bold inline-block">下載 Reels 影片 (WebM/MP4)</a><button id="editAgainBtn" class="text-xs text-gray-500 block mx-auto underline">返回編輯</button></div></div></div>
+    <!-- 輸出中彈出視窗 (Modal) -->
+    <div id="exportModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl relative">
+            <button id="cancelExportBtn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
 
-    <script src="utils.js"></script>
+            <!-- 渲染動畫中狀態 -->
+            <div id="renderingState">
+                <div class="relative w-28 h-28 mx-auto mb-6">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="56" cy="56" r="48" stroke-width="6" stroke="#1f2937" fill="transparent" />
+                        <circle id="progressCircle" cx="56" cy="56" r="48" stroke-width="6" stroke="url(#gradient)" stroke-dasharray="301.6" stroke-dashoffset="301.6" fill="transparent" stroke-linecap="round" />
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ec4899" />
+                                <stop offset="50%" stop-color="#ef4444" />
+                                <stop offset="100%" stop-color="#eab308" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span id="progressText" class="absolute inset-0 flex items-center justify-center text-lg font-bold text-gray-100">0%</span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-100 mb-2">正在渲染與合成您的 Reels 影片</h3>
+                <p class="text-xs text-gray-400 max-w-xs mx-auto mb-4">正在合併調色、文字浮水印與音樂混音。請保持分頁在前台開啟...</p>
+                <div class="bg-gray-950 px-4 py-2.5 rounded-xl border border-gray-800 text-[10px] text-gray-500 font-mono inline-block">
+                    時間軸進度：<span id="renderingTimeText">0.0s / 0.0s</span>
+                </div>
+            </div>
+
+            <!-- 完成狀態 -->
+            <div id="completedState" class="hidden">
+                <div class="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500 text-green-500 flex items-center justify-center mx-auto mb-6 text-3xl animate-bounce">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-100 mb-2">🎉 您的 Reel 已成功錄製完成！</h3>
+                <p class="text-xs text-gray-400 max-w-xs mx-auto mb-6">已完美套用所選調色，剪輯秒數、混音與文字浮水印已完全同步合併。</p>
+                
+                <div class="flex flex-col gap-3">
+                    <a id="downloadLink" class="bg-gradient-to-r from-pink-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> 下載 Reels 影片 (WebM/MP4)
+                    </a>
+                    <button id="editAgainBtn" class="text-xs text-gray-400 hover:text-white py-2 transition-colors">
+                        返回繼續編輯
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁尾宣告 -->
+    <footer class="border-t border-gray-900 bg-gray-950 py-4 text-center text-xs text-gray-600 mt-auto">
+        <p>&copy; 2026 SleekReels Pro. 純前端渲染架構技術，高規格保障影音不被外部伺服器竊取。</p>
+    </footer>
+
+    <!-- 主要核心邏輯 Script -->
     <script src="app.js"></script>
 </body>
 </html>
