@@ -1,22 +1,201 @@
-/* style.css - SleekReels Pro 固定核心樣式檔 */
-.reels-ratio {
-    aspect-ratio: 9 / 16;
-}
-.no-select {
-    user-select: none;
-    -webkit-user-select: none;
-}
-@keyframes disc-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-.spin-active {
-    animation: disc-spin 4s linear infinite;
-}
-@keyframes marquee {
-    0% { transform: translate3d(10%, 0, 0); }
-    100% { transform: translate3d(-100%, 0, 0); }
-}
-.marquee-active {
-    animation: marquee 12s linear infinite;
-}
+body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+            background-color: #0b0f19;
+        }
+        header {
+            z-index: 1000;
+        }
+        /* 隱藏滾動條 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+        /* 9:16 直式影片比例維持 */
+        .reels-ratio {
+            aspect-ratio: 9 / 16;
+        }
+        /* 禁止文字反選干擾拖曳 */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* 音樂唱片旋轉動畫 */
+        @keyframes disc-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spin-active {
+            animation: disc-spin 4s linear infinite;
+        }
+        /* 跑馬燈文字動畫 */
+        @keyframes marquee {
+            0% { transform: translate3d(10%, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        .marquee-active {
+            animation: marquee 12s linear infinite;
+        }
+        .phone-tool-scroll {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .phone-tool-scroll::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        .editor-shell {
+            grid-template-columns: minmax(0, 1fr) !important;
+            justify-content: center;
+            overflow: visible;
+        }
+        .editor-shell > .preview-column,
+        .editor-shell > .controls-column {
+            grid-column: 1 / -1 !important;
+            min-width: 0;
+        }
+
+        @media (max-width: 520px) {
+            header {
+                gap: 12px;
+                padding: 12px 14px !important;
+                position: static !important;
+            }
+            header h1 {
+                font-size: 1.05rem;
+                line-height: 1.2;
+            }
+            header p {
+                font-size: 0.68rem;
+                line-height: 1.25;
+            }
+            header > div:last-child span {
+                padding: 0.35rem 0.55rem;
+                font-size: 0.68rem;
+                white-space: normal;
+                line-height: 1.15;
+            }
+            .editor-shell {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+                gap: 14px;
+            }
+            .preview-column,
+            .controls-column {
+                width: 100%;
+            }
+            #previewSourceToolbar,
+            #mobileControllerSlot,
+            #integratedController,
+            #exportPanel {
+                width: min(100%, calc(100vw - 16px)) !important;
+                max-width: min(370px, calc(100vw - 16px)) !important;
+            }
+            #phonePreviewFrame {
+                width: clamp(250px, min(calc(100vw - 78px), calc((100dvh - 230px) * 9 / 16)), 340px) !important;
+                max-width: none !important;
+                padding: 10px !important;
+                border-radius: 38px !important;
+            }
+            #reelsContainer,
+            #previewCanvas,
+            #videoPlaceholder,
+            #videoLoadingSpinner {
+                border-radius: 28px !important;
+            }
+            #phoneToolRail {
+                right: -42px !important;
+                top: 128px !important;
+                bottom: 104px !important;
+                width: 40px !important;
+                gap: 8px !important;
+                z-index: 30 !important;
+            }
+            #phoneToolRail button {
+                width: 32px !important;
+                height: 28px !important;
+            }
+            #phoneLutDock,
+            #phoneTextSegmentDock {
+                gap: 6px !important;
+            }
+            #phoneAudioUploadBtn {
+                right: -42px !important;
+                bottom: 56px !important;
+                width: 36px !important;
+                height: 36px !important;
+                z-index: 30 !important;
+            }
+            #integratedController {
+                padding: 14px !important;
+                border-radius: 18px !important;
+            }
+            #integratedController .grid.grid-cols-2 {
+                gap: 8px !important;
+            }
+        }
+
+        @media (max-width: 370px) {
+            header > div:last-child span {
+                max-width: 96px;
+            }
+            #previewSourceToolbar {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+            #changeVideoBtn span {
+                display: none;
+            }
+            #phoneToolRail {
+                right: -38px !important;
+                width: 36px !important;
+                top: 120px !important;
+                bottom: 104px !important;
+            }
+            #phoneToolRail button {
+                width: 30px !important;
+                height: 27px !important;
+            }
+            #phoneAudioUploadBtn {
+                right: -38px !important;
+                width: 34px !important;
+                height: 34px !important;
+            }
+        }
+
+        @media (min-width: 1180px) {
+            .editor-shell {
+                max-width: 980px !important;
+                grid-template-columns: minmax(0, 430px) minmax(0, 370px) !important;
+                justify-content: center;
+                align-items: start;
+                column-gap: 56px;
+                overflow: visible;
+            }
+            .editor-shell > .preview-column,
+            .editor-shell > .controls-column {
+                grid-column: auto / span 1 !important;
+                min-width: 0;
+            }
+            .editor-shell > .controls-column {
+                padding-right: 0;
+            }
+        }
+
+        @media (min-width: 1280px) {
+            .editor-shell {
+                max-width: 1040px !important;
+                grid-template-columns: minmax(0, 430px) minmax(0, 390px) !important;
+                column-gap: 64px;
+            }
+        }
